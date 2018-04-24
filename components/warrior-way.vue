@@ -13,7 +13,7 @@
                 <div class="blue--text text--darken-2 headline">Просмотр</div>
             </v-card-title>
             <v-card-actions>
-                <v-btn color="blue darken-2"  flat dark><v-icon>fas fa-globe</v-icon>Listen now</v-btn>
+                <v-btn color="blue darken-2" flat dark @click="addEdge"><v-icon>fas fa-globe</v-icon>Listen now</v-btn>
             </v-card-actions>
         </v-card>
     </div>
@@ -64,51 +64,10 @@
             }
         },
         mounted() {
-            // randomly create some nodes and edges
-/*             for (var i = 0; i < 22; i++) {
-                this.nodes_array.push({
-                    id: i, 
-                    label: String(i), 
-                    title: 'THIS IS TITLE',
-                    icon: {
-                        face: 'FontAwesome',
-                        code: '\uf2bc',
-                        size: 50,
-                        color: '#1976D2'
-                    }
-                });
-            }
- */
-/*             this.edges_array.push({from: 0, to: 1});
-            this.edges_array.push({from: 0, to: 6});
-            this.edges_array.push({from: 0, to: 13});
-            this.edges_array.push({from: 0, to: 11});
-            this.edges_array.push({from: 1, to: 10});
-            this.edges_array.push({from: 1, to: 7});
-            this.edges_array.push({from: 1, to: 12});
-            this.edges_array.push({from: 1, to: 2});
-            this.edges_array.push({from: 2, to: 3});
-            this.edges_array.push({from: 2, to: 4});
-            this.edges_array.push({from: 3, to: 5});
-            this.edges_array.push({from: 2, to: 8});
-            this.edges_array.push({from: 2, to: 9});
-            this.edges_array.push({from: 3, to: 14});
-            this.edges_array.push({from: 6, to: 10});
-            this.edges_array.push({from: 16, to: 15});
-            this.edges_array.push({from: 15, to: 17});
-            this.edges_array.push({from: 18, to: 17});
-            this.edges_array.push({from: 19, to: 20});
-            this.edges_array.push({from: 19, to: 21});
+            // create a network
+            let container = document.getElementById('network');
 
- */            // create a network
-            var container = document.getElementById('network');
-
-/*             var data = {
-                nodes: new vis.DataSet(this.nodes),
-                edges: new vis.DataSet(this.edges_array)
-            };
- */
-            var options = {
+            let options = {
                 interaction:{
                     dragNodes:true,
                     dragView: true,
@@ -296,6 +255,11 @@
             'entities.edges': function(edges) {
                 this.data.edges.add(edges);
                 //this.network.fit();
+            }
+        },
+        methods: {
+            addEdge() {
+                this.data.edges.add({from: 11, to: 12});
             }
         }
     }
