@@ -54,15 +54,19 @@
     module.exports = {
         extends: component,
         data() {
+            this.network = void 0;
+            
             return {
-                nodes_array: [],
-                edges_array: []
+                data: {
+                    nodes: new vis.DataSet([]),
+                    edges: new vis.DataSet([])
+                },
             }
         },
         mounted() {
             // randomly create some nodes and edges
-            for (var i = 0; i < 22; i++) {
-                nodes_array.push({
+/*             for (var i = 0; i < 22; i++) {
+                this.nodes_array.push({
                     id: i, 
                     label: String(i), 
                     title: 'THIS IS TITLE',
@@ -74,36 +78,36 @@
                     }
                 });
             }
+ */
+/*             this.edges_array.push({from: 0, to: 1});
+            this.edges_array.push({from: 0, to: 6});
+            this.edges_array.push({from: 0, to: 13});
+            this.edges_array.push({from: 0, to: 11});
+            this.edges_array.push({from: 1, to: 10});
+            this.edges_array.push({from: 1, to: 7});
+            this.edges_array.push({from: 1, to: 12});
+            this.edges_array.push({from: 1, to: 2});
+            this.edges_array.push({from: 2, to: 3});
+            this.edges_array.push({from: 2, to: 4});
+            this.edges_array.push({from: 3, to: 5});
+            this.edges_array.push({from: 2, to: 8});
+            this.edges_array.push({from: 2, to: 9});
+            this.edges_array.push({from: 3, to: 14});
+            this.edges_array.push({from: 6, to: 10});
+            this.edges_array.push({from: 16, to: 15});
+            this.edges_array.push({from: 15, to: 17});
+            this.edges_array.push({from: 18, to: 17});
+            this.edges_array.push({from: 19, to: 20});
+            this.edges_array.push({from: 19, to: 21});
 
-            edges_array.push({from: 0, to: 1});
-            edges_array.push({from: 0, to: 6});
-            edges_array.push({from: 0, to: 13});
-            edges_array.push({from: 0, to: 11});
-            edges_array.push({from: 1, to: 10});
-            edges_array.push({from: 1, to: 7});
-            edges_array.push({from: 1, to: 12});
-            edges_array.push({from: 1, to: 2});
-            edges_array.push({from: 2, to: 3});
-            edges_array.push({from: 2, to: 4});
-            edges_array.push({from: 3, to: 5});
-            edges_array.push({from: 2, to: 8});
-            edges_array.push({from: 2, to: 9});
-            edges_array.push({from: 3, to: 14});
-            edges_array.push({from: 6, to: 10});
-            edges_array.push({from: 16, to: 15});
-            edges_array.push({from: 15, to: 17});
-            edges_array.push({from: 18, to: 17});
-            edges_array.push({from: 19, to: 20});
-            edges_array.push({from: 19, to: 21});
-
-            // create a network
+ */            // create a network
             var container = document.getElementById('network');
 
-            var data = {
-                nodes: new vis.DataSet(nodes_array),
-                edges: new vis.DataSet(edges_array)
+/*             var data = {
+                nodes: new vis.DataSet(this.nodes),
+                edges: new vis.DataSet(this.edges_array)
             };
-
+ */
             var options = {
                 interaction:{
                     dragNodes:true,
@@ -232,7 +236,11 @@
                 }
             };
 
-            network = new vis.Network(container, data, options);
+            let data = this.data;
+
+            this.network = new vis.Network(container, data, options);
+
+            let network = this.network;
 
             network.on('hoverNode', function(e) {
                 let selected = network.getSelection().nodes[0];
@@ -267,6 +275,28 @@
                 node.icon.color = '#2B7CE9';
                 data.nodes.update(node);
             });
+            
+            network.once('stabilized', function(e) {
+                network.fit();
+            });
+        },
+        computed: {
+/*             nodes() {
+                this.entities.nodes && this.data.nodes.add(this.entities.nodes);
+            },
+            edges() {
+                this.entities.edges && this.data.edges.add(this.entities.edges);
+            } */
+        },
+        watch: {
+            'entities.nodes': function(nodes) {
+                this.data.nodes.add(nodes);
+                //this.network.fit();
+            },
+            'entities.edges': function(edges) {
+                this.data.edges.add(edges);
+                //this.network.fit();
+            }
         }
     }
 

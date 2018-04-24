@@ -4,7 +4,8 @@ let service = window.location.pathname.split('/')[1];
 
 
 Vue.prototype.$state = {
-    location: ''
+    location: '',
+    entities: {}
 };
 
 let router = new VueRouter(
@@ -91,11 +92,23 @@ Vue.prototype.$request = async function(url, data, options) {
         .then(function(res) {
             request_queue[res.config.url] = false;
             
-            cache[Vue.prototype.$state.location] = res.data.sfc || cache[Vue.prototype.$state.location];
-
             callback && callback(res);
+                    
             
-            return cache[Vue.prototype.$state.location];
+            switch(res.status) {
+                case 201:
+                    cache[Vue.prototype.$state.location] = res.data.sfc || cache[Vue.prototype.$state.location];
+                    
+                    Vue.prototype.$request(`${Vue.prototype.$state.location}.get`);
+
+                    return cache[Vue.prototype.$state.location];
+                    break;
+                case 202:
+                    console.log(res.data);
+                    Vue.set(Vue.prototype.$state, 'entities', res.data);
+                    break;
+            }
+
         })
         .catch(function(err) {
             Vue.prototype.$bus.$emit('snackbar', `ERROR: ${err.message} ${err.code ? 'CODE: ' + err.code + '.': ''}`);
@@ -136,6 +149,9 @@ let component = {
         }
     },
     computed: {
+        entities() {
+            return this.state.entities;
+        },
         location() {
             return this.state.location;
         }

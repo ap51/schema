@@ -1,4 +1,4 @@
-let collections = ['schema'];
+let collections = ['node', 'edge'];
 
 const path = require('path');
 const Datastore = require('nedb');
