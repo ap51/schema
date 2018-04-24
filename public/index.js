@@ -8,7 +8,7 @@ Vue.prototype.$state = {
 
 let router = new VueRouter(
     {
-        base: Vue.prototype.$state.base_ui,
+        base: '/schema/',
         mode: 'history',
         routes: [
             {
@@ -69,7 +69,7 @@ Vue.prototype.$request = async function(url, data, options) {
     let {method, callback, encode, config, no_headers, on_merge} = options || {};
 
     let conf = {
-        url: url,
+        url,
         method: data ? method || 'post' : 'get',
         headers: {
             'content-type': encode ? 'application/x-www-form-urlencoded' : 'application/json',
