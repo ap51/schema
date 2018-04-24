@@ -4,6 +4,7 @@ let service = window.location.pathname.split('/')[1];
 
 
 Vue.prototype.$state = {
+    location: ''
 };
 
 let router = new VueRouter(
@@ -89,14 +90,19 @@ Vue.prototype.$request = async function(url, data, options) {
     request_queue[url] = axios(config)
         .then(function(res) {
             request_queue[res.config.url] = false;
-            callback && callback(res);
+            
+            cache[Vue.prototype.$state.location] = res.data.sfc || cache[Vue.prototype.$state.location];
 
+            callback && callback(res);
+            
+            return cache[Vue.prototype.$state.location];
         })
         .catch(function(err) {
             Vue.prototype.$bus.$emit('snackbar', `ERROR: ${err.message} ${err.code ? 'CODE: ' + err.code + '.': ''}`);
             delete request_queue[url];
             return '';// Promise.reject(err);
         });
+
     return request_queue[url];
 };
 
@@ -107,7 +113,10 @@ router.beforeEach(async function (to, from, next) {
 
     next();
 
-    Vue.prototype.$request(path);
+    !cache[path] && httpVueLoader.register(Vue, path);
+    Vue.prototype.$state.location = path;
+
+    //Vue.prototype.$request(path);
 });
 
 
@@ -123,12 +132,12 @@ Vue.config.devtools = true;
 let component = {
     data() {
         return {
-            
+            state: this.$state,
         }
     },
     computed: {
         location() {
-            return '';
+            return this.state.location;
         }
     }
 };

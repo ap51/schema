@@ -18,19 +18,25 @@ const httpsListenPort = 8000;
 
 const app = express();
 
-app.use(staticFileMiddleware);
+app.use('/:service', staticFileMiddleware);
 
-app.use(history({
+app.use('/:service', history({
     disableDotRule: true,
     verbose: false
 }));
 
-app.use(staticFileMiddleware);
+app.use('/:service', staticFileMiddleware);
 
 let httpsServer = https.createServer(credentials, app);
 
 let router_module = require(`./router`);
+
 app.use(`/schema/`, router_module.router);
+
+app.all('*', function(req, res, next) {
+    next();
+});
+
 
 httpsServer.listen(httpsListenPort);
 
