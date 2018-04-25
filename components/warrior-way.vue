@@ -5,19 +5,20 @@
                 <div class="blue--text text--darken-2 headline">Схема</div>
             </v-card-title>
             <v-card-title class="blue--text text--darken-2 schema">
-                <div id="network">VISJS</div>
-                <v-menu offset-x
-                        offset-y
+                <v-menu 
                         :position-x="popup.x + 50"
                         :position-y="popup.y"
                         :close-on-content-click="false"
                         :close-on-click="false"
                         :nudge-width="400"
                         v-model="popup.visible"
-                        style="position: absolute;">
+                        right
+                        top
+                        >
 
                     <step></step>
                 </v-menu>
+                <div id="network">VISJS</div>
             </v-card-title>
         </v-card>
         <v-card class="w-card w-preview ma-1">
@@ -28,6 +29,7 @@
                 <v-btn color="blue darken-2" flat dark @click="addEdge"><v-icon>fas fa-globe</v-icon>Listen now</v-btn>
             </v-card-actions>
         </v-card>
+
     </div>
 </template>
 
@@ -50,24 +52,28 @@
         flex: 1;
     }
 
-/*
+
     .schema {
         display: flex;
         flex-direction: column;
         align-items: stretch;
         flex: 1;
     }
-*/
-    .schema {
-        height: 100%;
-        width: 100%;
-    }
 
-    #network {
+/*     .schema {
+        height: 100%;
+        width: 100%;
+    } */
+
+/*     #network {
         height: 100%;
         width: 100%;
     }
-</style>
+ */
+    #network {
+        flex: 1;
+    }
+ </style>
 
 <script>
     module.exports = {
