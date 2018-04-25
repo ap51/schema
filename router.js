@@ -34,13 +34,13 @@ router.all('/:component\.:action', async function (req, res, next) {
                         data = {
                             nodes: [],
                             edges: []
-                        }
+                        };
 
-                        for (var i = 0; i < 22; i++) {
+                        for (let i = 0; i < 22; i++) {
                             data.nodes.push({
                                 id: i, 
                                 label: String(i), 
-                                title: 'THIS IS TITLE',
+                                //title: 'THIS IS TITLE',
                                 icon: {
                                     face: 'FontAwesome',
                                     code: '\uf2bc',

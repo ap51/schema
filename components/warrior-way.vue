@@ -6,6 +6,18 @@
             </v-card-title>
             <v-card-title class="blue--text text--darken-2 schema">
                 <div id="network">VISJS</div>
+                <v-menu offset-x
+                        offset-y
+                        :position-x="popup.x + 50"
+                        :position-y="popup.y"
+                        :close-on-content-click="false"
+                        :close-on-click="false"
+                        :nudge-width="400"
+                        v-model="popup.visible"
+                        style="position: absolute;">
+
+                    <step></step>
+                </v-menu>
             </v-card-title>
         </v-card>
         <v-card class="w-card w-preview ma-1">
@@ -38,25 +50,40 @@
         flex: 1;
     }
 
+/*
     .schema {
         display: flex;
         flex-direction: column;
         align-items: stretch;
         flex: 1;
     }
+*/
+    .schema {
+        height: 100%;
+        width: 100%;
+    }
 
     #network {
-        flex: 1;
+        height: 100%;
+        width: 100%;
     }
 </style>
 
 <script>
     module.exports = {
         extends: component,
+        components: {
+            'step': httpVueLoader('step')
+        },
         data() {
             this.network = void 0;
             
             return {
+                popup: {
+                    visible: false,
+                    x: 0,
+                    y: 0
+                },
                 data: {
                     nodes: new vis.DataSet([]),
                     edges: new vis.DataSet([])
@@ -64,6 +91,8 @@
             }
         },
         mounted() {
+            let self = this;
+
             // create a network
             let container = document.getElementById('network');
 
@@ -208,6 +237,12 @@
                     node.icon.size = node.icon.size + 15;
                     node.icon.color = '#388E3C';
                     data.nodes.update(node);
+
+                    let pos = e.pointer.DOM;
+
+                    self.popup.x = pos.x;
+                    self.popup.y = pos.y;
+                    self.popup.visible = true;
                 }
             });
 
@@ -218,6 +253,8 @@
                     node.icon.size = node.icon.size - 15;
                     node.icon.color = '#2B7CE9';
                     data.nodes.update(node);
+
+                    self.popup.visible = false;
                 }
             });
 
@@ -234,7 +271,14 @@
                 node.icon.color = '#2B7CE9';
                 data.nodes.update(node);
             });
-            
+
+            network.on('deselectNode', function(e) {
+                let node = data.nodes.get(e.previousSelection.nodes[0]);
+                node.icon.size = 50;
+                node.icon.color = '#2B7CE9';
+                data.nodes.update(node);
+            });
+
             network.once('stabilized', function(e) {
                 network.fit();
             });
@@ -249,11 +293,11 @@
         },
         watch: {
             'entities.nodes': function(nodes) {
-                this.data.nodes.add(nodes);
+                this.data.nodes.update(nodes);
                 //this.network.fit();
             },
             'entities.edges': function(edges) {
-                this.data.edges.add(edges);
+                this.data.edges.update(edges);
                 //this.network.fit();
             }
         },
