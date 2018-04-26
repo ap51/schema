@@ -11,6 +11,14 @@ class NotFoundError extends Error {
     }
 }
 
+process.$bus.send('known', process.pid, __filename);
+process.$bus.broadcast('hello', 'broadcast from module', process.pid);
+
+process.$bus.on('init', (date) => {
+    //console.log('INIT IN MODULE:', date);
+})
+
+
 let db = module.exports;
 
 for(let inx in collections) {

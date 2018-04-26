@@ -3,6 +3,7 @@
 
 const https = require('https');
 const path = require('path');
+const cluster = require('cluster');
 
 const express = require('express');
 
@@ -29,20 +30,129 @@ app.use('/:service', staticFileMiddleware);
 
 let httpsServer = https.createServer(credentials, app);
 
-let router_module = require(`./router`);
+let workers = {};
+let cpuCount = require('os').cpus().length;
+let proxy_modules = [];
 
-app.use(`/schema/`, router_module.router);
+const EventEmitter = require('events');
 
-app.all('*', function(req, res, next) {
-    next();
-});
+class MasterMessageBus extends EventEmitter {
+    constructor(process) {
+        super();
+
+        this.process = process;
+        this.children = [];
+        
+        process.$bus = this;
+
+        this._broadcast = function(sender, event, ...args) {
+            let message = {event, args};
+    
+            this.children.forEach(child => {
+                sender ? sender !== child && child.send(message) : child.send(message);
+                //child.send(message);
+            })
+        }
+    
+    }
+
+    push(child) {
+        this.children.push(child);
+
+        child.on('message', msg => {
+            let {event, args} = msg;
+            if(event.toUpperCase() === 'BROADCAST') {
+                this._broadcast(child, msg._event, ...args);
+            }
+            else this.emit(event, ...args, child);
+        });
+    };
+
+    broadcast(event, ...args) {
+        this._broadcast(void 0, event, ...args);
+    }
+}
+
+if(cluster.isMaster) {
+    new MasterMessageBus(process);
+    
+    process.$bus.on('event', (...args) => {
+      //console.log('EVENT:', args);
+    });
+    
+    process.$bus.on('known', (pid, type, worker) => {
+        //console.log('KNOWN:', pid, type, worker.id);
+    });
+
+    process.$bus.emit('event');
+
+    for (let i = 0; i < cpuCount; i++) {
+        let worker = cluster.fork();
+
+        process.$bus.push(worker);
+    }
+
+    process.$bus.broadcast('init', new Date());
+}
+
+if(cluster.isWorker) {
+    class WorkerMessageBus extends EventEmitter {
+        constructor(process) {
+            super();
+
+            this.process = process;
+
+            process.on('message', (msg) => {
+                let {event, args} = msg;
+                this.emit(event, ...args, process);
+            });
+
+            process.$bus = this;
+        }
+
+        send(event, ...args) {
+            let message = {event, args};
+            process.send(message);
+        }
+
+        broadcast(event, ...args) {
+            let message = {event: 'broadcast', _event: event, args};
+            process.send(message);
+        }
+    }
+    
+    new WorkerMessageBus(process);
+
+    process.$bus.send('event', {data: 'asdasdas'}, 'string');
+
+    process.$bus.on('init', (date) => {
+        //console.log('INIT IN SERVER:', date);
+    });
+    
+    process.$bus.on('hello', (text, pid) => {
+        console.log('HELLO:', process.pid, text, pid);
+    });
 
 
-httpsServer.listen(httpsListenPort);
+    //process.send('event', {data: 'asdasdas'}, 'string');
 
-console.log(`https server linten on ${httpsListenPort} port.`);
+
+
+    let router_module = require(`./router`);
+
+    app.use(`/schema/`, router_module.router);
+    
+    httpsServer.listen(httpsListenPort);
+
+    console.log(`https server linten on ${httpsListenPort} port.`);
+}
 
 process.on('unhandledRejection', err => {
     //throw err;
     console.log('unhandledRejection => ', err)
 });
+
+    
+/*     app.all('*', function(req, res, next) {
+        next();
+    }); */
