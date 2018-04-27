@@ -2,6 +2,10 @@
 let cache = {};
 let service = window.location.pathname.split('/')[1];
 
+Vue.prototype.$socket = io(`/${service}`, {
+    path: `/${service}/_socket_`,
+    transports: ['websocket', 'polling']
+});
 
 Vue.prototype.$state = {
     location: '',

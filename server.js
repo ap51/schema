@@ -49,6 +49,16 @@ if(cluster.isMaster) {
         process.$bus.broadcast('proxyme', {kdkd:''})
     });
 
+    process.$bus.on('execute', async (module, eid, ...args) => {
+        let worker = args.pop();
+
+        let $module = require(module);
+        let [method, ...params] = args;
+        let result = await $module[method](...params);
+
+        worker.send(`executed:${eid}`, null, result);
+    });
+
     /////////////////////////////////////////////////////////////////
 /*
     process.$bus.on('event', (...args) => {
@@ -86,19 +96,17 @@ if(cluster.isWorker) {
 */
 
 
+
 ////////////////////////////
     fs.readdir('./services/', (err, dirs) => {
         dirs.forEach(async dir => {
             console.log(dir);
             try {
                 const io = require('socket.io')(httpsServer, {
-                    path: `/${dir}/ui/_socket_`
+                    path: `/${dir}/_socket_`
                 });
 
                 name_spaces[`${dir}:${cluster.worker.id}`] = io.of(`/${dir}`);
-
-                let router_module = require(`./services/${dir}/router`);
-                app.use(`/${dir}/`, router_module.router);
 
                 name_spaces[`${dir}:${cluster.worker.id}`].on('connection', function(client){
                     name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`] = client;
@@ -108,6 +116,14 @@ if(cluster.isWorker) {
                     });
 
                 });
+
+
+                app.use(`/${dir}/`, (req, res, next) => {
+                    req.io = name_spaces[`${dir}:${cluster.worker.id}`];
+                    next();
+                });
+
+                app.use(`/${dir}/`, require(`./services/${dir}/router`).router);
             }
             catch (err) {
                 console.log(err);

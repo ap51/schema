@@ -46,18 +46,25 @@ function MessageBus() {
         if(cluster.isMaster) {
             children[child.id] = child;
 
+            child.$send = child.send;
+
+            child.send = function (event, ...args) {
+                let message = {event, args};
+                child.$send(message); //send to worker
+            };
+
             child.on('message', msg => {
                 let {event, args} = msg;
                 if (event.toUpperCase() === 'BROADCAST') {
                     _broadcast(child, msg._event, ...args);
                 }
-                else emitter.emit(event, ...args, child);
+                else emitter.emit(event, ...args, child); //self master trigger on
             });
         }
         else {
             child.on('message', (msg) => {
                 let {event, args} = msg;
-                emitter.$emit(event, ...args);
+                emitter.$emit(event, ...args); //self worker trigger on
             });
         }
     }
@@ -74,7 +81,7 @@ function MessageBus() {
     function broadcast(event, ...args) {
         if(cluster.isWorker) {
             let message = {event: 'broadcast', _event: event, args};
-            process.send(message);
+            process.send(message); //send to master to broadcast
         }
         else _broadcast(void 0, event, ...args);
     }
