@@ -11,13 +11,20 @@ class NotFoundError extends Error {
     }
 }
 
-process.$bus.send('known', process.pid, __filename);
+process.$bus.emit('proxyme', __filename);
+
+process.$bus.on('proxyme', (date) => {
+    console.log('INIT IN MODULE:', date);
+});
+
+/*
+process.$bus.emit('known', process.pid, __filename);
 process.$bus.broadcast('hello', 'broadcast from module', process.pid);
 
 process.$bus.on('init', (date) => {
-    //console.log('INIT IN MODULE:', date);
-})
-
+    console.log('INIT IN MODULE:', date);
+});
+*/
 
 let db = module.exports;
 

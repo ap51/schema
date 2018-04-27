@@ -93,7 +93,7 @@ router.all('/:component', async function (req, res, next) {
 
     let response = {
         sfc: cheerio.load(content).html()
-    }
+    };
 
     res.status(201).json(response);
     res.end();

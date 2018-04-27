@@ -10,7 +10,7 @@ Vue.prototype.$state = {
 
 let router = new VueRouter(
     {
-        base: '/schema/',
+        base: `/${service}/`,
         mode: 'history',
         routes: [
             {

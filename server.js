@@ -30,121 +30,95 @@ app.use('/:service', staticFileMiddleware);
 
 let httpsServer = https.createServer(credentials, app);
 
-let workers = {};
 let cpuCount = require('os').cpus().length;
-let proxy_modules = [];
 
-const EventEmitter = require('events');
-
-class MasterMessageBus extends EventEmitter {
-    constructor(process) {
-        super();
-
-        this.process = process;
-        this.children = [];
-        
-        process.$bus = this;
-
-        this._broadcast = function(sender, event, ...args) {
-            let message = {event, args};
-    
-            this.children.forEach(child => {
-                sender ? sender !== child && child.send(message) : child.send(message);
-                //child.send(message);
-            })
-        }
-    
-    }
-
-    push(child) {
-        this.children.push(child);
-
-        child.on('message', msg => {
-            let {event, args} = msg;
-            if(event.toUpperCase() === 'BROADCAST') {
-                this._broadcast(child, msg._event, ...args);
-            }
-            else this.emit(event, ...args, child);
-        });
-    };
-
-    broadcast(event, ...args) {
-        this._broadcast(void 0, event, ...args);
-    }
-}
+const MessageBus = require('./ipcemitter');
 
 if(cluster.isMaster) {
-    new MasterMessageBus(process);
-    
-    process.$bus.on('event', (...args) => {
-      //console.log('EVENT:', args);
-    });
-    
-    process.$bus.on('known', (pid, type, worker) => {
-        //console.log('KNOWN:', pid, type, worker.id);
-    });
 
-    process.$bus.emit('event');
+    process.$bus = MessageBus();
 
     for (let i = 0; i < cpuCount; i++) {
         let worker = cluster.fork();
 
-        process.$bus.push(worker);
+        process.$bus.listen(worker);
     }
+
+    process.$bus.on('proxyme', (module, worker) => {
+        console.log('PROXY:', module);
+        process.$bus.broadcast('proxyme', {kdkd:''})
+    });
+
+    /////////////////////////////////////////////////////////////////
+/*
+    process.$bus.on('event', (...args) => {
+        console.log('EVENT:', args[0], args[1]);
+    });
+
+    process.$bus.on('known', (pid, type, worker) => {
+        console.log('KNOWN:', pid, type, worker.id);
+    });
+
+    process.$bus.emit('event', 'from master'); //только для себя вызов переделать по идее на broadcast
 
     process.$bus.broadcast('init', new Date());
+*/
 }
 
+let name_spaces = {};
+let name_spaces_sockets = [];
+
 if(cluster.isWorker) {
-    class WorkerMessageBus extends EventEmitter {
-        constructor(process) {
-            super();
 
-            this.process = process;
+    process.$bus = MessageBus();
+    process.$bus.listen(process);
 
-            process.on('message', (msg) => {
-                let {event, args} = msg;
-                this.emit(event, ...args, process);
-            });
-
-            process.$bus = this;
-        }
-
-        send(event, ...args) {
-            let message = {event, args};
-            process.send(message);
-        }
-
-        broadcast(event, ...args) {
-            let message = {event: 'broadcast', _event: event, args};
-            process.send(message);
-        }
-    }
-    
-    new WorkerMessageBus(process);
-
-    process.$bus.send('event', {data: 'asdasdas'}, 'string');
+/*
+    process.$bus.emit('event', {data: 'asdasdas'}, 'from worker');
 
     process.$bus.on('init', (date) => {
-        //console.log('INIT IN SERVER:', date);
+        console.log('INIT IN SERVER:', date);
     });
     
     process.$bus.on('hello', (text, pid) => {
         console.log('HELLO:', process.pid, text, pid);
     });
+*/
 
 
-    //process.send('event', {data: 'asdasdas'}, 'string');
+////////////////////////////
+    fs.readdir('./services/', (err, dirs) => {
+        dirs.forEach(async dir => {
+            console.log(dir);
+            try {
+                const io = require('socket.io')(httpsServer, {
+                    path: `/${dir}/ui/_socket_`
+                });
 
+                name_spaces[`${dir}:${cluster.worker.id}`] = io.of(`/${dir}`);
 
+                let router_module = require(`./services/${dir}/router`);
+                app.use(`/${dir}/`, router_module.router);
 
-    let router_module = require(`./router`);
+                name_spaces[`${dir}:${cluster.worker.id}`].on('connection', function(client){
+                    name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`] = client;
 
-    app.use(`/schema/`, router_module.router);
-    
-    httpsServer.listen(httpsListenPort);
+                    client.on('disconnect', function(){
+                        delete name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`];
+                    });
 
-    console.log(`https server linten on ${httpsListenPort} port.`);
+                });
+            }
+            catch (err) {
+                console.log(err);
+            }
+        });
+
+        httpsServer.listen(httpsListenPort);
+
+        console.log(`https server linten on ${httpsListenPort} port.`);
+    });
+
 }
 
 process.on('unhandledRejection', err => {
@@ -153,6 +127,6 @@ process.on('unhandledRejection', err => {
 });
 
     
-/*     app.all('*', function(req, res, next) {
-        next();
-    }); */
+app.all('*', function(req, res, next) {
+    next();
+});
