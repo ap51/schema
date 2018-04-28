@@ -12,13 +12,14 @@ class NotFoundError extends Error {
     }
 }
 
+
+/*
 process.$bus.emit('proxyme', __filename);
 
 process.$bus.on('proxyme', (date) => {
     console.log('INIT IN MODULE:', date);
 });
 
-/*
 process.$bus.emit('known', process.pid, __filename);
 process.$bus.broadcast('hello', 'broadcast from module', process.pid);
 
@@ -129,15 +130,15 @@ if(cluster.isMaster) { //DB not used in MASTER PROCESS, ONLY IN ROUTER
 else {
     let exports = ['find', 'findOne', 'update', 'remove', 'insert'];
 
-    module.exports = exports.reduce((memo, item) => {
-        memo[item] = function (...args) {
+    module.exports = exports.reduce((memo, method) => {
+        memo[method] = function (...args) {
             return new Promise((resolve, reject) => {
                 let eid = nanoid();
 
-                process.$bus.emit('execute', __filename, eid, item, ...args);
+                process.$bus.emit('execute', __filename, eid, method, ...args);
 
-                process.$bus.once(`executed:${eid}`, (err, result) => { //DO ONLY ONCE FOR NOT TO GROW LISTENERS
-                    resolve(result);
+                process.$bus.once(`executed:${eid}`, (err, result) => { //DO ONLY ONCE NOT TO GROW NUMBER OF LISTENERS
+                    err ? reject(err) : resolve(result);
                 });
 
             });
@@ -148,5 +149,5 @@ else {
     }, {});
 }
 
-ПОПРОБОВАТЬ ПЕРЕВЕСТИ ВСЕ НА WebSocket???
-ВНЕДРИТЬ АВТОРИЗАЦИЮ
+//ПОПРОБОВАТЬ ПЕРЕВЕСТИ ВСЕ НА WebSocket???
+//ВНЕДРИТЬ АВТОРИЗАЦИЮ

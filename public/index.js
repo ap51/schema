@@ -14,7 +14,7 @@ Vue.prototype.$state = {
 
 let router = new VueRouter(
     {
-        base: `/${service}/`,
+        base: `/${service}/ui/`,
         mode: 'history',
         routes: [
             {
@@ -172,11 +172,11 @@ window.vm = new Vue({
         }
     },
     components: {
+        'location': httpVueLoader('location')
     },
     created() {
         let self = this;
         this.$vuetify.theme = theme;
-
     },
     computed: {
     }

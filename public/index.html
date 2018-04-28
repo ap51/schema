@@ -16,11 +16,13 @@
         <div id="app" style="height: 100%;">
             <!-- Preload old FontAwesome -->
             <div style="width: 0px; height: 0px; overflow: hidden;"><i style="font-family: FontAwesome" class="fa fa-globe"></i></div> 
-
+            
+            <location :component="location"></location>
+<!-- 
             <keep-alive>
                 <component :is="location"></component>
             </keep-alive>
-
+ -->
         </div>
 
         <script src="js/md5.min.js"></script>

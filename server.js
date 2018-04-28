@@ -19,20 +19,24 @@ const httpsListenPort = 8000;
 
 const app = express();
 
-app.use('/:service', staticFileMiddleware);
+app.use('/:service/ui', staticFileMiddleware);
 
-app.use('/:service', history({
+app.use('/:service/ui', history({
     disableDotRule: true,
     verbose: false
 }));
 
-app.use('/:service', staticFileMiddleware);
+app.use('/:service/ui', staticFileMiddleware);
 
 let httpsServer = https.createServer(credentials, app);
 
 let cpuCount = require('os').cpus().length;
 
 const MessageBus = require('./ipcemitter');
+
+class UI {
+
+}
 
 if(cluster.isMaster) {
 
@@ -44,19 +48,23 @@ if(cluster.isMaster) {
         process.$bus.listen(worker);
     }
 
-    process.$bus.on('proxyme', (module, worker) => {
+/*     process.$bus.on('proxyme', (module, worker) => {
         console.log('PROXY:', module);
         process.$bus.broadcast('proxyme', {kdkd:''})
     });
-
+ */
     process.$bus.on('execute', async (module, eid, ...args) => {
         let worker = args.pop();
 
         let $module = require(module);
         let [method, ...params] = args;
-        let result = await $module[method](...params);
-
-        worker.send(`executed:${eid}`, null, result);
+        try {
+            let result = await $module[method](...params);
+            worker.send(`executed:${eid}`, null, result);
+        }
+        catch(err) {
+            worker.send(`executed:${eid}`, err);
+        }
     });
 
     /////////////////////////////////////////////////////////////////
