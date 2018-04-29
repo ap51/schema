@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
+const util = require('util');
+const readFile = util.promisify(fs.readFile);
 
 const database = require('./database/db');
 
@@ -11,27 +13,53 @@ const bodyParser = require('body-parser');
 
 let router = express.Router();
 
-let readFile = function(path){
-    return new Promise(function (resolve, reject) {
-        fs.readFile(path, function (err, content){
-            err ? reject(err) : resolve(content);
-        });
-    });
-};
-
 let patterns = ['/:section/:component\::id\.:action', '/:section/:component\.:action', '/:section/:component\::id', '/:section/:component'];
 
 let api_patterns = ['/:section/:component\::id\.:action', '/:section/:component\.:action'];
 let ui_patterns = ['/:section/:component\::id', '/:section/:component'];
 
+let cache = {};
+
+class CustomError extends Error {
+    constructor(params) {
+        let {code, message} = params;
+        super(message);
+        this.code = code;
+    }
+}
+//{access, user, client, id}
 
 class Base {
-    constructor(id) {
+    constructor(params) {
+        let {access, user, client, id, bus, name} = params || {};
         this.id = id;
+        this.$bus = bus;
+        this.$name = name;
+
+        this.cheerio = require('cheerio');
     }
 
     get name() {
-        return this.__proto__.constructor.name;
+        return this.$name || this.__proto__.constructor.name;
+    }
+
+    get data() {
+        return {
+            title: this.name
+        }
+    }
+
+    async sfc(root) {
+        let content = '';
+
+        try {
+            content = await readFile(path.join(root, 'components', `${this.name}.vue`))
+        }
+        catch (err) {
+            content = await readFile(path.join(root, 'components', 'not-found.vue'));
+        }
+
+        return this.cheerio.load(content).html();
     }
 
     model(data) {
@@ -70,6 +98,23 @@ function UI(SuperClass) {
     }
 }
 
+function Layout(SuperClass) {
+
+    return class Layout extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return {
+                owner: this.name,
+                ...super.data
+            };
+        }
+
+    }
+}
+
 function About(SuperClass) {
     
     return class About extends SuperClass {
@@ -77,26 +122,46 @@ function About(SuperClass) {
             super(...args);
         }
 
-        uiFunction() {
-            return super.uiFunction();
+        get data() {
+            return super.data;
         }
 
-        aboutFunction() {
-            
-        }
     }
 }
 
-    
+function WarriorWay(SuperClass) {
+
+    return class WarriorWay extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return super.data;
+        }
+
+    }
+}
+
 let matrix = [
     {
         component: UI,
         access: [],
         children: [
             {
-                component: About,
-                access: ['*']
-            }
+                component: Layout,
+                access: [],
+                children: [
+                    {
+                        component: About,
+                        access: ['*']
+                    },
+                    {
+                        component: WarriorWay,
+                        access: ['*']
+                    }
+                ]
+            },
         ]
     },
     {
@@ -109,49 +174,61 @@ let matrix = [
             }
         ]
     }
-]
+];
 
-/* const Factory = (Base = Component) => class ComponentClass extends Base {
-    
-};
+const ignore = ['location', 'step'];
 
-let cc = Factory(Component);
- */
-
-function Access(matrix) {
+function Classes(matrix) {
 
     let entries = transform(matrix);
-
-    let about = new entries.About(1000);
-    
-    let model = about.model({name: 'asas'});
+    entries.ignore = ignore;
 
     return entries;
 
     function transform(entries, ParentClass) {
         return entries.reduce((memo, entry) => {
-            
-            let ComponentClass = entry.component(ParentClass || Base);
-            let name = ComponentClass.name;
 
+            ParentClass = ParentClass || Base;
+
+            let ComponentClass = entry.component(ParentClass);
+
+            ComponentClass.$name = ParentClass.$name ? ParentClass.$name + '.' + ComponentClass.name.toLowerCase() : ComponentClass.name.toLowerCase();
+            ComponentClass.location = ComponentClass.$name;
+
+            ParentClass === Base ? ComponentClass.root = ComponentClass.$name : ComponentClass.root = ParentClass.root;
 
 
             if(entry.children) {
                 let children = transform(entry.children, ComponentClass);
                 Object.assign(memo, children);
             }
+            else ComponentClass.$name = ComponentClass.root + '.' + ComponentClass.name.toLowerCase();
 
-            memo[name] = ComponentClass;
+            memo[ComponentClass.$name] = ComponentClass;
             return memo;
         }, {});
     }
 }
 
-let access_matrix = Access(matrix);
+let classes = Classes(matrix);
 
 router.all(patterns, function(req, res, next) {
     //JWT ЗДЕСЬ
-    console.log(req.params.component);
+
+    req.$params = req.params;
+    req.$params.location = req.params.section + '.' + req.params.component;
+
+    let is_ignored = classes.ignore.find(component => component === req.$params.component);
+    let name = is_ignored ? req.$params.component : req.$params.location;
+
+    try {
+        req.$component = cache[name] || (is_ignored ? new Base({name}) : new classes[name]());
+        cache[name] = req.$component;
+    }
+    catch (err) {
+        req.$component = new Base({name: 'not-found'})
+    }
+
     next();
 });
 
@@ -167,6 +244,7 @@ router.all(api_patterns, async function (req, res, next) {
     //6. вызов родительских действий (наследование в классе по таблице доступа)
     //7. общий класс для компонента и общий класс по таблице доступа
     //8. ...
+/*
     switch(req.params.component) {
         case 'warrior-way':
                 switch(req.params.action) {
@@ -192,20 +270,17 @@ router.all(api_patterns, async function (req, res, next) {
 
     res.status(202).json(data);
     res.end();
+*/
+    res.status(202).json(data);
+    res.end();
 });
 
 router.all(ui_patterns, async function (req, res, next) {
-    let content = '';
-    
-    try {
-        content = await readFile(path.join(__dirname, 'components', `${req.params.component}.vue`))
-    }
-    catch (err) {
-        content = await readFile(path.join(__dirname, 'components', 'not-found.vue'));
-    }
+    let component = req.$component;
 
     let response = {
-        sfc: cheerio.load(content).html()
+        sfc: await component.sfc(__dirname),
+        data: await component.data
     };
 
     res.status(201).json(response);

@@ -127,7 +127,7 @@ if(cluster.isWorker) {
 
 
                 app.use(`/${dir}/`, (req, res, next) => {
-                    req.io = name_spaces[`${dir}:${cluster.worker.id}`];
+                    req.$io = name_spaces[`${dir}:${cluster.worker.id}`];
                     next();
                 });
 
