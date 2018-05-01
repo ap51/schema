@@ -163,7 +163,7 @@ Vue.prototype.$request = async function(url, data, options) {
                     let api = res.data.result || '';
                     let entry = res.data.entry || '';
 
-                    let merge = deepmerge(Vue.prototype.$state.entities, res.data.entities, {
+                    let merge = deepmerge(Vue.prototype.$state.entities, res.data.entities || {}, {
                         arrayMerge: function (destination, source, options) {
                             //ALL ARRAYS MUST BE SIMPLE IDs HOLDER AFTER NORMALIZE
                             if(res.config.method.toUpperCase() === 'DELETE') {

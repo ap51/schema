@@ -34,8 +34,8 @@ let ui_patterns = ['/:section/:component\::id', '/:section/:component'];
 let cache = {};
 
 class CustomError extends Error {
-    constructor(params) {
-        let {code, message} = params;
+    constructor(...args) {
+        let [code, message] = args;
         super(message);
         this.code = code;
     }
@@ -204,11 +204,11 @@ router.all(patterns, [jwtHandler(), async function(req, res, next) {
     }
     catch (err) {
         let error = {
-            error: err.code || 400,
+            code: err.code || 400,
             message: err.message
         };
 
-        req.$response = {...error};
+        req.$response = {error};
     }
 
     next();
@@ -249,11 +249,11 @@ router.all(patterns, [async function (req, res, next) {
         }
         catch (err) {
             let error = {
-                error: err.code || 400,
+                code: err.code || 400,
                 message: err.message
             };
 
-            req.$response = {...error};
+            req.$response = {error};
         }
     }
 

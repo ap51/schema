@@ -8,6 +8,14 @@ const readFile = util.promisify(fs.readFile);
 const database = require('./database/db');
 const OAUTH = require('./oauth');
 
+class CustomError extends Error {
+    constructor(...args) {
+        let [code, message] = args;
+        super(message);
+        this.code = code;
+    }
+}
+
 class Base {
     constructor(params) {
 
@@ -30,21 +38,50 @@ class Base {
 
         let trace = function(key, context, value, args) {
 
+            let matrix = self.access.reduce((memo, item) => {
+                item === '*' && (item = '*:*');
+
+                let [method, rule] = item.split(':');
+                method = method === '*' ? key : method;
+                rule = rule === '*' ? !!self.user : !self.user ? false : self.user.group === rule ? true : 'denied';
+
+                memo[method] = rule;
+                return memo;
+            }, {});
+
             let need_auth = !!self.access.length;
-            console.log('CALL', self.name, key, self.access, 'need auth:', need_auth);
-
             if(need_auth) {
-                switch (key) {
-                    case 'sfc':
-                        let [root, name] = args;
+                matrix[key] = typeof matrix[key] === 'undefined' ? true : matrix[key];
 
-                        if(!self.user)
-                            self.reload = true;
-                            return self.sfc(root, 'unauthenticate');
-                        break;
+                let access = matrix[key];
+
+                console.log('CALL', self.name, key, self.access, 'need auth:', need_auth);
+
+                switch (access) {
+                    case true:
+                        return value.apply(context, args);
+                    case false:
+                        self.reload = true;
+                        if(key === 'sfc') {
+                            return self.sfc(__dirname, 'unauthenticate');
+                        }
+                        if(key === 'get') {
+                            return {};
+                        }
+                        throw new CustomError(404, 'unauthenticate access');
+                    case 'denied':
+                        self.reload = true;
+                        if(key === 'sfc') {
+                            return self.sfc(__dirname, 'accessdenied');
+                        }
+                        if(key === 'get') {
+                            return {};
+                        }
+                        throw new CustomError(404, 'access denied');
                 }
             }
             return value.apply(context, args);
+
         };
 
         return new Proxy(self, {
@@ -433,7 +470,7 @@ let matrix = [
                     },
                     {
                         component: About,
-                        access: []
+                        access: ['*:users']
                     },
                     {
                         component: Work,
