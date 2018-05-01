@@ -42,6 +42,11 @@ if(cluster.isMaster) {
 
     process.$bus = MessageBus();
 
+    process.$bus.on('signedin', (worker) => {
+        console.log('FORM MASTER SIGNIN:');
+        worker.send(`signedin`);
+    });
+
     for (let i = 0; i < cpuCount; i++) {
         let worker = cluster.fork();
 

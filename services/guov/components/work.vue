@@ -34,6 +34,9 @@
 </template>
 
 <style scoped>
+    .vis-tooltip {
+        display: none;
+    }
     .layout-view {
         display: flex;
         justify-content: center;
@@ -114,12 +117,12 @@
                     navigationButtons: false,
                     selectable: true,
                     selectConnectedEdges: false,
-                    tooltipDelay: 300,
+                    tooltipDelay: 600,
                     zoomView: true
                 },
                 layout: {
                     hierarchical: {
-                        sortMethod: 'directed'
+                        //sortMethod: 'directed'
                     }
                 },
                 edges: {
@@ -174,7 +177,7 @@
                         bold: {
                             color: '#343434',
                             size: 140, // px
-                            face: 'arial',
+                            face: 'Roboto Condensed',
                             vadjust: 0,
                             mod: 'bold'
                         },
@@ -231,6 +234,12 @@
             };
 
             let data = this.data;
+/*
+            let data = {
+                nodes: new vis.DataSet(this.nodes),
+                edges: new vis.DataSet(this.edges)
+            };
+*/
 
             this.network = new vis.Network(container, data, options);
 
@@ -244,11 +253,6 @@
                     node.icon.color = '#388E3C';
                     data.nodes.update(node);
 
-                    let pos = e.pointer.DOM;
-
-                    self.popup.x = pos.x;
-                    self.popup.y = pos.y;
-                    self.popup.visible = true;
                 }
             });
 
@@ -260,8 +264,23 @@
                     node.icon.color = '#2B7CE9';
                     data.nodes.update(node);
 
-                    self.popup.visible = false;
                 }
+            });
+
+            network.on('showPopup', function(id) {
+                let node = data.nodes.get(id);
+
+                let e = network.getPositions([id])
+                let pos = e[id];
+                pos = network.canvasToDOM({...pos});
+
+                self.popup.x = pos.x;
+                self.popup.y = pos.y;
+                self.popup.visible = true;
+            });
+
+            network.on('hidePopup', function(e) {
+                self.popup.visible = false;
             });
 
             network.on('selectNode', function(e) {
@@ -290,20 +309,20 @@
             });
         },
         computed: {
-/*             nodes() {
-                this.entities.nodes && this.data.nodes.add(this.entities.nodes);
+             nodes() {
+                return this.entities.node;
             },
             edges() {
-                this.entities.edges && this.data.edges.add(this.entities.edges);
-            } */
+                return this.entities.edge;
+            }
         },
         watch: {
-            'entities.nodes': function(nodes) {
-                this.data.nodes.update(nodes);
+            'entities.node': function(nodes) {
+                this.data.nodes.update(Object.values(nodes));
                 //this.network.fit();
             },
-            'entities.edges': function(edges) {
-                this.data.edges.update(edges);
+            'entities.edge': function(edges) {
+                this.data.edges.update(Object.values(edges));
                 //this.network.fit();
             }
         },
@@ -314,5 +333,5 @@
         }
     }
 
-    //# sourceURL=warrior-way.js
+    //# sourceURL=work.js
 </script>

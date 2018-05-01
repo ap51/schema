@@ -1,5 +1,7 @@
 <template>
         <v-card color="white">
+            <about></about>
+<!--
             <v-list>
                 <v-list-tile avatar>
                     <v-list-tile-avatar>
@@ -33,6 +35,7 @@
                     <v-list-tile-title>Enable hints</v-list-tile-title>
                 </v-list-tile>
             </v-list>
+-->
             <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn flat @click="menu = false">Cancel</v-btn>
@@ -69,6 +72,9 @@
 <script>
     module.exports = {
         extends: component,
+        components: {
+            'about': httpVueLoader('about'),
+        },
         data() {
             return {
             }

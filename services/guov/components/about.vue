@@ -13,7 +13,7 @@
             </p>
         </div>
 
-        <v-btn color="blue darken-2" flat to="warrior-way">Начать работу</v-btn>
+        <v-btn color="blue darken-2" flat to="work">Начать работу</v-btn>
     </div>
 </template>
 

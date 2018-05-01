@@ -15,16 +15,23 @@
 
         <div id="app" style="height: 100%;">
             <!-- Preload old FontAwesome -->
-            <div style="width: 0px; height: 0px; overflow: hidden;"><i style="font-family: FontAwesome" class="fa fa-globe"></i></div> 
-            
+            <div style="width: 0px; height: 0px; overflow: hidden;"><i style="font-family: FontAwesome" class="fa fa-globe"></i></div>
+
             <location :component="location"></location>
-<!-- 
-            <keep-alive>
-                <component :is="location"></component>
-            </keep-alive>
- -->
+            <loader></loader>
+
+            <v-snackbar
+                    :timeout="snackbar.timeout"
+                    :color="snackbar.color"
+                    :multi-line="snackbar.multiline"
+                    :vertical="snackbar.vertical"
+                    v-model="snackbar.visible">
+                {{ snackbar.message }}
+                <v-btn dark flat @click.native="snackbar.visible = false">Close</v-btn>
+            </v-snackbar>
         </div>
 
+        <script src="js/deepmerge.js"></script>
         <script src="js/md5.min.js"></script>
         <script src="js/socket.io.js"></script>
         <script src="js/axios.min.js"></script>
