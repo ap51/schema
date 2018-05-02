@@ -3,13 +3,11 @@
         <h1>произошла какая-то херня...</h1>
         <h2>(страница не найдена)</h2>
 
-        <v-icon color="red darken-2" class="shadow ma-2">fas fa-unlink fa-3x</v-icon>
+        <v-icon color="red darken-2" class="shadow ma-2">fas fa-unlink fa-2x</v-icon>
+        <!--<h2>{{name}}</h2>-->
         <h2>{{address.url}}</h2>
-<!--
-        <h2 class="ma-2"><v-icon color="red darken-2" class="shadow mr-2">fas fa-unlink</v-icon>{{location}}</h2>
--->
 
-        <v-btn color="blue darken-2" flat @click.stop="reload()">Попросить сервер еще раз</v-btn>
+        <v-btn color="blue darken-2" flat>Попросить сервер еще раз</v-btn>
     </div>
 </template>
 
@@ -40,12 +38,20 @@
 <script>
     module.exports = {
         extends: component,
+        mounted() {
+            console.log(this.name)
+        },
+        activated() {
+            console.log(this.name)
+        },
         methods: {
-            reload() {
+/*
+            asdasreload1() {
                 //window.location.pathname = this.$state.base + this.$state.path;
                 //this.$page(this.address.ident);
             }
-        }
+*/
+        },
     }
 
     //# sourceURL=not-found.js

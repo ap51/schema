@@ -8,6 +8,7 @@ Vue.prototype.$socket = io(`/${service}`, {
 });
 
 Vue.prototype.$state = {
+    locationToggle: false,
     auth: void 0,
     api: void 0,
     entry: void 0,
@@ -143,6 +144,7 @@ Vue.prototype.$request = async function(url, data, options) {
                     }
 
                     component_data[path.component] = res.data.data;
+                    component_data[path.component].reload = res.data.reload;
 
                     layouts = ('root.' + res.data.location).split('.');
                     layouts = layouts.reduce((memo, layout, inx, arr) => {
@@ -243,14 +245,14 @@ router.beforeEach(async function (to, from, next) {
 
     path = parse(path);
 
-    if(!cache[path.component])
-        await Vue.prototype.$request(path.component);
-    //!cache[path.component] && await Vue.prototype.$request(path.component);
+    !cache[path.component] && await Vue.prototype.$request(path.component);
 
-    if(vm && !vm.$options.components[path.component])
-        httpVueLoader.register(Vue, path.component);
     //vm && !vm.$options.components[path.component] && httpVueLoader.register(Vue, path.component);
+    if(vm && !vm.$options.components[path.component]) {
+        httpVueLoader.register(Vue, path.component);
+    }
 
+    Vue.prototype.$state.locationToggle = !Vue.prototype.$state.locationToggle;
     component_data[path.component] && (Vue.prototype.$state.location = component_data[path.component].layouts);
 });
 
@@ -262,7 +264,9 @@ const theme = {
     error: '#b71c1c'
 };
 
+////////////////////////////////////////////////////////
 Vue.config.devtools = true;
+////////////////////////////////////////////////////////
 
 let component = {
     data() {
@@ -294,6 +298,7 @@ let component = {
     },
     computed: {
         address() {
+            this.state.locationToggle && void 0; //ensure this will update computed value
             let path = window.location.pathname;
             return parse(path);
         },
@@ -309,6 +314,28 @@ let component = {
         },
         location() {
             return typeof this.state.location && this.state.location[this.name];
+        }
+    },
+    methods: {
+        update() {
+            cache = {};
+            let entries = Object.entries(component_data);
+            entries.forEach(async (entry) => {
+                let [name, data] = entry;
+
+                if(data.reload) {
+                    delete cache[name];
+                    //delete component_data[name];
+                    if(vm.$options.components[name]) {
+                        delete vm.$options.components[name];
+                    }
+
+                    await Vue.prototype.$request(name);
+                    Vue.prototype.$state.location = component_data[name].layouts
+                }
+
+            })
+
         }
     }
 };

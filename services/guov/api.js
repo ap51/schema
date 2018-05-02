@@ -55,8 +55,6 @@ class Base {
 
                 let access = matrix[key];
 
-                console.log('CALL', self.name, key, self.access, 'need auth:', need_auth);
-
                 switch (access) {
                     case true:
                         return value.apply(context, args);
@@ -65,21 +63,18 @@ class Base {
                         if(key === 'sfc') {
                             return self.sfc(__dirname, 'unauthenticate');
                         }
-                        if(key === 'get') {
-                            return {};
-                        }
-                        throw new CustomError(404, 'unauthenticate access');
+
+                        throw new CustomError(404, `unauthenticate access: ${self.name}.${key}`);
                     case 'denied':
                         self.reload = true;
                         if(key === 'sfc') {
                             return self.sfc(__dirname, 'accessdenied');
                         }
-                        if(key === 'get') {
-                            return {};
-                        }
-                        throw new CustomError(404, 'access denied');
+
+                        throw new CustomError(404, `access denied: ${self.name}.${key}`);
                 }
             }
+
             return value.apply(context, args);
 
         };
@@ -151,7 +146,7 @@ function UI(SuperClass) {
                 content = await readFile(path.join(root, 'components', `${name}.vue`))
             }
             catch (err) {
-                content = await readFile(path.join(root, 'components', 'not-found.vue'));
+                content = await readFile(path.join(root, 'components', 'notfound.vue'));
             }
 
             return cheerio.load(content).html();
@@ -421,6 +416,8 @@ function Work(SuperClass) {
         }
 
         async get() {
+            console.log(this.name, 'WORK:GET');
+
             let query = await Promise.all([
                 database.find('node', {}, {not_clear_result: true}),
                 database.find('edge', {}, {not_clear_result: false})
@@ -445,6 +442,10 @@ function Step(SuperClass) {
 
         get data() {
             return {};
+        }
+
+        get() {
+
         }
 
     }
@@ -474,7 +475,7 @@ let matrix = [
                     },
                     {
                         component: Work,
-                        access: ['sfc:*'], //'method:access_group'
+                        access: ['sfc:*', 'get:admins'], //'method:access_group'
                         scope: ['web'],
                         children: [
                             {

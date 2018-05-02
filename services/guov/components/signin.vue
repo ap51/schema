@@ -77,6 +77,7 @@
             submitted() {
                 this.$request(`layout.update`, void 0, {callback: () => {
                         this.$emit('cancel');
+                        this.update();
                     }
                 });
             },

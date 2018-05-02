@@ -1,13 +1,10 @@
 <template>
-    <div class="layout-view">
+    <div class="layout-view ma-4">
         <h1>не аутентифицированный доступ</h1>
         <h2>(не выполнен вход в систему)</h2>
-<!--
-        <v-icon color="red darken-2" class="shadow">fas fa-user-secret fa-3x</v-icon>
-        <h1>"{{address.url}}"</h1>
--->
+
         <v-icon color="red darken-2" class="shadow ma-2">fas fa-user-secret fa-3x</v-icon>
-        <h2>{{address.url}}</h2>
+        <h2>{{name}}</h2>
 
         <v-btn color="blue darken-2" flat="flat" @click="signin">ВОЙТИ</v-btn>
     </div>

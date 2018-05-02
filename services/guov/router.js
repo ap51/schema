@@ -233,6 +233,7 @@ router.all(patterns, [async function (req, res, next) {
                 let data = req.$component[req.$params.action] ? await req.$component[req.$params.action](req, res) : {entities: {}};
 
                 req.$response = {
+                    reload: req.$component.reload,
                     status: 2,
                     ...data,
                 };
