@@ -1,10 +1,10 @@
 <template>
     <div class="layout-view ma-4">
-        <h1>доступ закрыт</h1>
-        <h2>(пользователь не имеет соответствующих прав)</h2>
+        <b>ДОСТУП ЗАКРЫТ</b>
+        <span>(пользователь не имеет соответствующих прав)</span>
 
-        <v-icon color="red darken-2" class="shadow ma-2">fas fa-minus-circle fa-3x</v-icon>
-        <h2>{{name}}</h2>
+        <v-icon color="red darken-2" class="shadow ma-2">fas fa-minus-circle fa-2x</v-icon>
+        <span>{{name}}</span>
 
         <!--<v-btn color="blue darken-2" flat="flat" @click="signin">ВОЙТИ</v-btn>-->
     </div>

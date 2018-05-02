@@ -1,11 +1,11 @@
 <template>
-    <div class="layout-view">
-        <h1>произошла какая-то херня...</h1>
-        <h2>(страница не найдена)</h2>
+    <div class="layout-view ma-4">
+        <b>ПРОИЗОШЛА КАКАЯ-ТО ХЕРНЯ...</b>
+        <span>(страница не найдена)</span>
 
         <v-icon color="red darken-2" class="shadow ma-2">fas fa-unlink fa-2x</v-icon>
         <!--<h2>{{name}}</h2>-->
-        <h2>{{address.url}}</h2>
+        <span>{{address.url}}</span>
 
         <v-btn color="blue darken-2" flat>Попросить сервер еще раз</v-btn>
     </div>

@@ -72,6 +72,7 @@
 
                 <signin :visible="signin" @cancel="signin = false"></signin>
                 <signout :visible="signout" @cancel="signout = false"></signout>
+                <account :visible="account" :object="{}" @cancel="account = false"></account>
 
 <!--
                 <dialog-signin :visible="signin" @cancel="signin = false"></dialog-signin>
@@ -125,9 +126,7 @@
         components: {
             'signin': httpVueLoader('signin'),
             'signout': httpVueLoader('signout'),
-            /*
-                        'account': httpVueLoader('account'),
-            */
+            'account': httpVueLoader('account'),
             'location': httpVueLoader('location'),
         },
         data() {

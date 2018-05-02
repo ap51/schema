@@ -60,16 +60,18 @@ class Base {
                         return value.apply(context, args);
                     case false:
                         self.reload = true;
-                        if(key === 'sfc') {
+                        if(key === 'sfc')
                             return self.sfc(__dirname, 'unauthenticate');
-                        }
+
+                        if(key === 'get') return {};
 
                         throw new CustomError(404, `unauthenticate access: ${self.name}.${key}`);
                     case 'denied':
                         self.reload = true;
-                        if(key === 'sfc') {
+                        if(key === 'sfc')
                             return self.sfc(__dirname, 'accessdenied');
-                        }
+
+                        if(key === 'get') return {};
 
                         throw new CustomError(404, `access denied: ${self.name}.${key}`);
                 }
@@ -263,7 +265,7 @@ function Layout(SuperClass) {
             if(this.user) {
                 tabs.push({
                     name: 'PRIVATE:' + this.user.id,
-                    to: 'private'
+                    to: 'friends'
                 });
             }
 
@@ -451,6 +453,115 @@ function Step(SuperClass) {
     }
 }
 
+function Private(SuperClass) {
+
+    return class Private extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            let tabs = [];
+
+            tabs.push({
+                name: 'Друзья',
+                to: 'friends'
+            });
+
+            tabs.push({
+                name: 'Беседы',
+                to: 'chats'
+            });
+
+            tabs.push({
+                name: 'Приложения',
+                to: 'applications'
+            });
+
+            return {
+                tabs
+            };
+        }
+
+        get() {
+
+        }
+
+    }
+}
+
+function Friends(SuperClass) {
+
+    return class Friends extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return {};
+        }
+
+        async get(req, res) {
+            let friends = await database.find('friend', {user: req.user.id}, {allow_empty: true});
+            friends = friends.map(record => record.friend);
+            let users = await database.find('user', {_id: {$in: friends}}, {allow_empty: true});
+            let profiles = await database.find('profile', {user: {$in: friends}}, {allow_empty: true});
+
+            users = users.map(function (user) {
+                let profile = profiles.find(record => record.user === user.id);
+                user.public_id = profile.public_id;
+                return user;
+            });
+
+            return this.model({
+                users: [
+                    {
+                        id: req.user.id,
+                        friends: users
+                    }
+                ]
+            });
+        }
+
+    }
+}
+
+function Chats(SuperClass) {
+
+    return class Chats extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return {};
+        }
+
+        get() {
+
+        }
+
+    }
+}
+
+function Applications(SuperClass) {
+
+    return class Applications extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return {};
+        }
+
+        get() {
+
+        }
+
+    }
+}
+
 let matrix = [
     {
         component: UI,
@@ -482,6 +593,22 @@ let matrix = [
                                 component: Step,
                             },
                         ]
+                    },
+                    {
+                        component: Private,
+                        access: ['sfc:*', 'get:admins'], //'method:access_group'
+                        scope: ['web'],
+                        children: [
+                            {
+                                component: Friends,
+                            },
+                            {
+                                component: Chats,
+                            },
+                            {
+                                component: Applications,
+                            },
+                        ]
                     }
                 ]
             }
@@ -499,7 +626,7 @@ let matrix = [
     }
 ];
 
-const ignore = ['location', 'loader'];
+const ignore = ['location', 'loader', 'account', 'profile'];
 
 function Classes() {
 

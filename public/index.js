@@ -318,23 +318,23 @@ let component = {
     },
     methods: {
         update() {
-            cache = {};
+            //cache = {};
             let entries = Object.entries(component_data);
+            let current = parse(window.location.pathname);
             entries.forEach(async (entry) => {
                 let [name, data] = entry;
 
-                if(data.reload) {
-                    delete cache[name];
-                    //delete component_data[name];
-                    if(vm.$options.components[name]) {
-                        delete vm.$options.components[name];
-                    }
+                delete cache[name];
+                httpVueLoader.register(Vue, name);
 
-                    await Vue.prototype.$request(name);
-                    Vue.prototype.$state.location = component_data[name].layouts
+                if(current.component === name) {
+                    Vue.prototype.$state.location = {root: 'layout'}; //make dynamic check
+
+                    vm.$nextTick(function () {
+                        Vue.prototype.$state.location = component_data[name].layouts;
+                    });
                 }
-
-            })
+            });
 
         }
     }
