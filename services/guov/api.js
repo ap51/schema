@@ -626,7 +626,7 @@ let matrix = [
     }
 ];
 
-const ignore = ['location', 'loader', 'account', 'profile'];
+const ignore = ['location', 'loader', 'account', 'profile', 'picture-input'];
 
 function Classes() {
 

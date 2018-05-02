@@ -1,21 +1,23 @@
 <template>
     <v-dialog v-model="visible" persistent max-width="400px" hide-overlay>
-    <div class="layout-view" v-if="!loading">
+<!--
         <v-toolbar flat color="white lighten-2" dense class="elevation-1 ma-1">
             <v-toolbar-title>{{name}}:</v-toolbar-title>
             <v-spacer></v-spacer>
             <v-btn flat to="profile:ap-51"><v-icon color="green darken-2" class="mr-1 mb-1">far fa-check-circle</v-icon>profile ap-51</v-btn>
             <v-btn flat to="profile:jd"><v-icon color="green darken-2" class="mr-1 mb-1">far fa-check-circle</v-icon>profile jd</v-btn>
             <v-btn flat to="feed:jd"><v-icon color="green darken-2" class="mr-1 mb-1">far fa-check-circle</v-icon>feed jd</v-btn>
-            <!-- <v-btn flat="flat" :disabled="selected.length === 0" @click.stop="remove"><v-icon color="red darken-2" class="mr-1 mb-1">fas fa-times</v-icon>remove</v-btn> -->
+            &lt;!&ndash; <v-btn flat="flat" :disabled="selected.length === 0" @click.stop="remove"><v-icon color="red darken-2" class="mr-1 mb-1">fas fa-times</v-icon>remove</v-btn> &ndash;&gt;
             <v-btn :disabled="!changed" flat="flat" @click.stop="apply({...object})"><v-icon color="green darken-2" class="mr-1 mb-1">far fa-check-circle</v-icon>apply</v-btn>
         </v-toolbar>
-        <v-card flat width="50%">
+-->
+        <v-card flat>
             <v-card-text>
                 <v-container grid-list-md>
-                    <v-layout wrap>
-                        <v-form ref="form" @submit.prevent>
-                            <v-flex xs12>
+                    <v-layout>
+                        <v-form  ref="form" @submit.prevent>
+                            <v-flex flat xs12>
+<!--
                                 <v-btn
                                     @click="$refs.pictureInput.removeImage()"
                                     color="red darken-2"
@@ -27,27 +29,16 @@
                                     
                                     <v-icon style="font-size: 20px; height: 22px;">fas fa-times</v-icon>
                                 </v-btn>
-<!-- :request="$request" -->
-<!-- :prefill="`${state.base}files/images/${object.avatar}` || 'static/foster.jpg'" -->
+-->
+
                                 <picture-input
-                                    :request="$request"
-                                    class="elevation-1"
                                     ref="pictureInput"
-                                    @change="onChange"
-                                    @remove="onRemove"
-                                    @prefill="onPrefill"
                                     width="200"
                                     height="200"
-                                    margin="0"
-                                    :prefill="prefill"
-                                    :plain="false"
                                     accept="image/jpeg,image/png"
                                     size="10"
-                                    :crop="false"
-                                    :removable="false"
-                                    :auto-toggle-aspect-ratio="true"
-                                    :hide-change-button="true"
-                                    :custom-strings="strings">
+                                    :prefill="prefill"
+                                    >
 
                                 </picture-input>
 
@@ -93,11 +84,10 @@
 -->                        
                         </v-form>
                     </v-layout>
+                    <small>*indicates required field</small>
                 </v-container>
-                <small>*indicates required field</small>
             </v-card-text>
         </v-card>
-    </div>
     </v-dialog>
 </template>
 
@@ -107,7 +97,8 @@
     module.exports = {
         extends: component,
         props: [
-            'visible'
+            'visible',
+            'object'
         ],
         components: {
             'picture-input': httpVueLoader('picture-input')
@@ -136,15 +127,20 @@
         },
         computed: {
             prefill() {
+/*
                 console.log('PREFILL:', this.name);
                 this.internal_prefill = this.internal_prefill || ((this.current_user && this.current_user.avatar) ? `${this.state.base}files/images/${this.current_user.avatar}` : '');
                 return this.internal_prefill;
+*/
+                return 'https://s3.amazonaws.com/uifaces/faces/twitter/matthewkay_/128.jpg'
             },
+/*
             object() {
                 //console.log(this.state.locationToggle);
                 this.internal_object = this.internal_object || (this.current_user && {...this.current_user});
                 return this.internal_object;
             },
+*/
             changed() {
                 return JSON.stringify(this.internal_object) !== JSON.stringify(this.current_user);
             }
@@ -162,7 +158,7 @@
                 }
             },
             onPrefill(image) {
-                this.internal_object.avatar = this.internal_object.avatar || 'avatar.jpg';
+                //this.internal_object.avatar = this.internal_object.avatar || 'avatar.jpg';
                 //this.checkChanges();
             },
             onRemove(image) {

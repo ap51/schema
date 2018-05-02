@@ -84,16 +84,20 @@ let request_queue = {};
 let component_data = {};
 
 Vue.prototype.$request = async function(url, data, options) {
+    let {method, callback, encode, config, no_headers, on_merge, not_parse_url} = options || {};
 
-    url = url.replace('/index.vue', '').replace(/_/gi, ':').replace(`/${service}/ui/`, '');
-    url = `/${service}/ui/` + url;
+    let path = {};
 
-    let path = parse(url);
+    if(!not_parse_url) {
+        url = url.replace('/index.vue', '').replace(/_/gi, ':').replace(`/${service}/ui/`, '');
+        url = `/${service}/ui/` + url;
+
+        path = parse(url);
+    }
 
     if(request_queue[url])
         return request_queue[url];
 
-    let {method, callback, encode, config, no_headers, on_merge} = options || {};
 
     let response = !data && !path.action && cache[path.component];
     if(response)
@@ -104,6 +108,7 @@ Vue.prototype.$request = async function(url, data, options) {
         method: data ? method || 'post' : 'get',
         headers: {
             'content-type': encode ? 'application/x-www-form-urlencoded' : 'application/json',
+            'Access-Control-Allow-Origin': '*'
         },
         transformRequest: function(obj) {
             let transformed = encode ? Qs.stringify(obj) : JSON.stringify(obj);
