@@ -14,7 +14,7 @@
                                 <div class="blue--text text--darken-2" color="">Avatar</div>
                                 <input style="display: none" type="file" @change="onFileChange" ref="file_input" accept="image/*">
 
-                                <div class="elevation-1 ma-2" @click="selectFile" style="display: flex;flex-direction: column;align-items: center;width: 200px;height: 200px;max-width: 200px;max-height: 200px;">
+                                <div class="elevation-0 ma-2" @click="selectFile" style="display: flex;flex-direction: column;align-items: center;width: 200px;height: 200px;max-width: 200px;max-height: 200px;">
                                     <img style="max-width: 200px;max-height: 200px;margin: auto;display: block;" :src="image">
                                 </div>
                                 <v-btn small icon @click="removeImage" color="red--text text--darken-2" >
@@ -92,6 +92,9 @@
         computed: {
         },
         methods: {
+            cancel() {
+                this.$emit('cancel');
+            },
             onFileChange(e) {
                 var files = e.target.files || e.dataTransfer.files;
                 if (!files.length)

@@ -72,7 +72,7 @@
 
                 <signin :visible="signin" @cancel="signin = false"></signin>
                 <signout :visible="signout" @cancel="signout = false"></signout>
-                <account :visible="account" :object="{}" @cancel="account = false"></account>
+                <account :visible="account" :object="{...auth}" @cancel="account = false"></account>
 
 <!--
                 <dialog-signin :visible="signin" @cancel="signin = false"></dialog-signin>
