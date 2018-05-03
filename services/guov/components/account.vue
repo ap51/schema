@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="visible" persistent max-width="400px" hide-overlay>
+    <v-dialog v-model="visible" persistent max-width="400px" content-class="dlg">
         <v-card>
             <v-card-title>
                 <v-icon class="mr-1 blue--text text--darken-2">fas fa-user-circle</v-icon>
@@ -73,12 +73,6 @@
 </template>
 
 <style scoped>
-    .flex {
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
 
 </style>
 

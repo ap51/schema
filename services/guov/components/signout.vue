@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="visible" persistent max-width="400px" hide-overlay>
+    <v-dialog v-model="visible" persistent max-width="400px">
         <v-card>
             <v-card-title>
                 <v-icon class="mr-1 blue--text text--darken-2">fas fa-sign-out-alt</v-icon>

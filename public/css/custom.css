@@ -131,3 +131,7 @@ form {
 .input-group.input-group--error label {
     animation: none !important;
 }
+
+.overlay--active:before {
+    opacity: .0;
+}

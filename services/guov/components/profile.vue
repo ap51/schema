@@ -1,19 +1,23 @@
 <template>
 
-    <v-dialog v-model="visible" persistent max-width="400px" hide-overlay >
+    <v-dialog v-model="visible" persistent max-width="400px">
         <v-card flat >
+            <v-card-title>
+                <v-icon class="mr-1 blue--text text--darken-2">fas fa-user-circle</v-icon>
+                <span class="headline blue--text text--darken-2">profile</span>
+            </v-card-title>
             <v-card-text>
                 <v-container grid-list-md>
                     <v-layout>
                         <v-form  ref="form" @submit.prevent>
                             <v-flex flat xs12 style="display: flex;flex-direction: column;align-items: center;">
+                                <div class="blue--text text--darken-2" color="">Avatar</div>
+                                <input style="display: none" type="file" @change="onFileChange" ref="file_input" accept="image/*">
 
-                                <input style="display: none" type="file" @change="onFileChange" ref="file_input">
-
-                                <div class="elevation-1" @click="selectFile" style="display: flex;flex-direction: column;align-items: center;width: 100px;height: 100px;max-width: 100px;max-height: 100px;">
-                                    <img style="max-width: 100px;max-height: 100px;margin: auto;display: block;" :src="image">
+                                <div class="elevation-1 ma-2" @click="selectFile" style="display: flex;flex-direction: column;align-items: center;width: 200px;height: 200px;max-width: 200px;max-height: 200px;">
+                                    <img style="max-width: 200px;max-height: 200px;margin: auto;display: block;" :src="image">
                                 </div>
-                                <v-btn small icon @click="removeImage">
+                                <v-btn small icon @click="removeImage" color="red--text text--darken-2" >
                                     <v-icon color="red darken-2" style="font-size: 16px; height: 20px;">fas fa-times</v-icon>
                                 </v-btn>
 
@@ -46,6 +50,11 @@
                     <small>*indicates required field</small>
                 </v-container>
             </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="blue darken-2" flat @click.native="cancel">cancel</v-btn>
+                <v-btn color="blue darken-2" flat @click.native="save({...object})">save</v-btn>
+            </v-card-actions>
         </v-card>
     </v-dialog>
 </template>

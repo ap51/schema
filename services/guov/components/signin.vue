@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="visible" hide-overlay persistent max-width="500px">
+    <v-dialog v-model="visible" persistent max-width="500px">
 
         <v-card>
             <v-card-title>
