@@ -14,11 +14,12 @@
                                 <div class="blue--text text--darken-2" color="">Avatar</div>
                                 <input style="display: none" type="file" @change="onFileChange" ref="file_input" accept="image/*">
 
-                                <div class="elevation-0 ma-2" @click="selectFile" style="display: flex;flex-direction: column;align-items: center;width: 200px;height: 200px;max-width: 200px;max-height: 200px;">
-                                    <img style="max-width: 200px;max-height: 200px;margin: auto;display: block;" :src="image">
+                                <div class="elevation-0 ma-2" @click="selectFile" style="cursor: pointer;display: flex;flex-direction: column;align-items: center;width: 150px;height: 150px;max-width: 150px;max-height: 150px;">
+                                    <img style="max-width: 150px;max-height: 150px;margin: auto;display: block;" :src="image">
                                 </div>
-                                <v-btn small icon @click="removeImage" color="red--text text--darken-2" >
-                                    <v-icon color="red darken-2" style="font-size: 16px; height: 20px;">fas fa-times</v-icon>
+                                <v-btn small flat @click="removeImage" color="red darken-2" >
+                                    <v-icon color="red darken-2" style="font-size: 16px; height: 20px;" class="mr-1">fas fa-times</v-icon>
+                                    remove avatar
                                 </v-btn>
 
                             </v-flex>
@@ -27,7 +28,6 @@
                                     label="Public ID"
                                     required
                                     prepend-icon="fas fa-id-card"
-                                    autofocus
                                     color="blue darken-2"
                                     hint="RegEpxr: ^[a-zA-Z0-9-]{4,}$"
                                     :rules="[
@@ -39,10 +39,10 @@
                             </v-flex>
                             <v-flex xs12>
                                 <v-text-field v-model="object.status"
-                                            label="Status text"
-                                            prepend-icon="far fa-comment-alt"
-                                            color="blue darken-2"
-                                            hint="any string value"
+                                    label="Status text"
+                                    prepend-icon="far fa-comment-alt"
+                                    color="blue darken-2"
+                                    hint="any string value"
                                 ></v-text-field>
                             </v-flex>
                         </v-form>
