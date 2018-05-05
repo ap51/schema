@@ -67,7 +67,7 @@
             </v-card-actions>
         </v-card>
 
-        <profile :visible="profile" :object="{...auth}" @cancel="profile = false"></profile>
+        <profile :visible="profile" :object="{...entity}" @cancel="profile = false"></profile>
 
     </v-dialog>
 </template>
@@ -92,6 +92,11 @@
                 password: '',
                 profile: false
             }
+        },
+        computed: {
+            entity() {
+                return this.entities.profile && this.entities.profile[this.auth.id] || {};
+            },
         },
         methods: {
             cancel() {

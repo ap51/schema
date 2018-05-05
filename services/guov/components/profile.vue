@@ -15,11 +15,10 @@
                                 <input style="display: none" type="file" @change="onFileChange" ref="file_input" accept="image/*">
 
                                 <div class="elevation-0 ma-2" @click="selectFile" style="cursor: pointer;display: flex;flex-direction: column;align-items: center;width: 150px;height: 150px;max-width: 150px;max-height: 150px;">
-<<<<<<< HEAD
                                     <img crossorigin="anonymous" ref="avatar" style="max-width: 150px;max-height: 150px;margin: auto;display: block;" :src="image">
-=======
+<!--
                                     <img style="max-width: 150px;max-height: 150px;margin: auto;display: block;" :src="image">
->>>>>>> 2b38b8b646fc076e81776eb5eb984eb12ef16529
+-->
                                 </div>
                                 <v-btn small flat @click="removeImage" color="red darken-2" >
                                     <v-icon color="red darken-2" style="font-size: 16px; height: 20px;" class="mr-1">fas fa-times</v-icon>
@@ -131,7 +130,7 @@
                 });
 
                 this.blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
-                data.append('avatar', this.blob);
+                data.append('image', this.blob);
 
                 this.$request('profile.save', data, {encode: 'form-data', callback: this.cancel});
             }

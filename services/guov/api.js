@@ -594,12 +594,21 @@ function Profile(SuperClass) {
             return {};
         }
 
-        get() {
+        async get(req, res) {
+            let profile = await database.findOne('profile', {user: req.user.id});
 
+            return this.model({
+                users: [
+                    {
+                        id: req.user.id,
+                        profile
+                    }
+                ]
+            });
         }
 
         async save(req, res) {
-            let avatar = upload.single('avatar');
+            let avatar = upload.single('image');
             avatar(req, res, function (err) {
 
                 if(err) throw err;

@@ -72,7 +72,7 @@
 
                 <signin :visible="signin" @cancel="signin = false"></signin>
                 <signout :visible="signout" @cancel="signout = false"></signout>
-                <account :visible="account" :object="{...auth}" @cancel="account = false"></account>
+                <account :visible="account" :object="{...entity}" @cancel="account = false"></account>
 
 <!--
                 <dialog-signin :visible="signin" @cancel="signin = false"></dialog-signin>
@@ -165,6 +165,9 @@
             //this.$state.shared.location = void 0;
         },
         computed: {
+            entity() {
+                return this.auth && this.entities.user[this.auth.id] || {};
+            },
             active_tab: {
                 get() {
                     return this.tabs.find(tab => tab.active);
