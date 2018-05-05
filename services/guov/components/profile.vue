@@ -77,7 +77,7 @@
         data() {
             return {
                 blob: void 0,
-                image: 'files/ava.png',
+                //image: 'files/ava.png',
             }
         },
         beforeCreate() {
@@ -85,9 +85,22 @@
         created() {
         },
         computed: {
+            image() {
+                //!this.blob && this.object.image && (this.blob = this.object.image);
+                if(!this.blob && this.object.image) {
+                    let binary = new Uint8Array(this.object.image.data);
+                    let blob = new Blob([binary], {type: this.object.mimeType});
+                    this.createImage(blob);
+                    //this.blob = blob;
+                }
+
+                //!this.blob && this.object.image && this.createImage(new Blob(this.object.image.data, {type: this.object.mimeType}));
+                return this.blob;
+            }
         },
         methods: {
             cancel() {
+                this.blob = void 0;
                 this.$emit('cancel');
             },
             onFileChange(e) {
@@ -96,7 +109,7 @@
                 if (!files.length)
                     return;
 
-                this.object.file_name = files[0].name;
+                this.object.avatar = files[0].name;
 
                 this.createImage(files[0]);
             },
@@ -105,21 +118,21 @@
                 let self = this;
 
                 reader.onload = (e) => {
-                    self.image = e.target.result;
+                    self.blob = e.target.result;
                 };
 
                 reader.readAsDataURL(file);
             },
             removeImage: async function (e) {
-                this.image = 'files/ava.png';
-                //this.blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
+                //this.image = 'files/ava.png';
+                this.blob = 'files/ava.png';//await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
                 console.log(this.blob);
             },
             selectFile() {
                 this.$refs.file_input.click();
             },
             async save() {
-                this.object.file_name = this.object.file_name || 'ava.png';
+                this.object.avatar = this.object.avatar || 'ava.png';
 
                 let data = new FormData();
                 let fields = Object.entries(this.object);
@@ -129,8 +142,8 @@
                     data.append(name, value);
                 });
 
-                this.blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
-                data.append('image', this.blob);
+                let blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
+                data.append('image', blob);
 
                 this.$request('profile.save', data, {encode: 'form-data', callback: this.cancel});
             }

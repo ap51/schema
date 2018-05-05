@@ -106,7 +106,7 @@
         computed: {
             entity() {
                 this.pagination.page = this.activePage || this.pagination.page || 1;
-                return this.auth && this.entities.user[this.auth.id].friends ? this.entities.user[this.auth.id].friends.map(friend => this.entities.user[friend]) : [];
+                return this.auth.id && this.entities.user && this.entities.user[this.auth.id].friends ? this.entities.user[this.auth.id].friends.map(friend => this.entities.user[friend]) : [];
             },
             pages () {
                 if (this.pagination.rowsPerPage == null || this.pagination.totalItems == null)

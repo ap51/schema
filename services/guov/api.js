@@ -4,9 +4,6 @@ const util = require('util');
 const normalizer = require('normalizr');
 const cheerio = require('cheerio');
 
-const multer  = require('multer');
-const upload = multer();
-
 const readFile = util.promisify(fs.readFile);
 const database = require('./database/db');
 const OAUTH = require('./oauth');
@@ -18,6 +15,43 @@ class CustomError extends Error {
         this.code = code;
     }
 }
+
+function getDestination (req, file, cb) {
+    let destination = __dirname;
+    if(req.user)
+        destination = path.join(__dirname, 'public', req.user.id, req.body.avatar);
+
+    cb(null, destination)
+}
+
+function MyCustomStorage (opts) {
+    this.getDestination = (opts.destination || getDestination)
+}
+
+MyCustomStorage.prototype._handleFile = function _handleFile (req, file, cb) {
+    this.getDestination(req, file, function (err, path) {
+        if (err) return cb(err);
+
+        let outStream = fs.createWriteStream(path);
+
+        file.stream.pipe(outStream);
+        outStream.on('error', cb);
+        outStream.on('finish', function () {
+            cb(null, {
+                path: path,
+                size: outStream.bytesWritten
+            })
+        })
+    })
+};
+
+MyCustomStorage.prototype._removeFile = function _removeFile (req, file, cb) {
+    fs.unlink(file.path, cb)
+};
+
+const multer  = require('multer');
+const upload = multer({ storage: new MyCustomStorage({}) });
+
 
 class Base {
     constructor(params) {
@@ -505,25 +539,27 @@ function Friends(SuperClass) {
         }
 
         async get(req, res) {
-            let friends = await database.find('friend', {user: req.user.id}, {allow_empty: true});
-            friends = friends.map(record => record.friend);
-            let users = await database.find('user', {_id: {$in: friends}}, {allow_empty: true});
-            let profiles = await database.find('profile', {user: {$in: friends}}, {allow_empty: true});
+            if(req.user) {
+                let friends = await database.find('friend', {user: req.user.id}, {allow_empty: true});
+                friends = friends.map(record => record.friend);
+                let users = await database.find('user', {_id: {$in: friends}}, {allow_empty: true});
+                let profiles = await database.find('profile', {user: {$in: friends}}, {allow_empty: true});
 
-            users = users.map(function (user) {
-                let profile = profiles.find(record => record.user === user.id);
-                user.public_id = profile.public_id;
-                return user;
-            });
+                users = users.map(function (user) {
+                    let profile = profiles.find(record => record.user === user.id);
+                    user.public_id = profile.public_id;
+                    return user;
+                });
 
-            return this.model({
-                users: [
-                    {
-                        id: req.user.id,
-                        friends: users
-                    }
-                ]
-            });
+                return this.model({
+                    users: [
+                        {
+                            id: req.user.id,
+                            friends: users
+                        }
+                    ]
+                });
+            }
         }
 
     }
@@ -595,30 +631,50 @@ function Profile(SuperClass) {
         }
 
         async get(req, res) {
-            let profile = await database.findOne('profile', {user: req.user.id});
+            if(req.user) {
+                let profile = await database.findOne('profile', {user: req.user.id});
 
-            return this.model({
-                users: [
-                    {
-                        id: req.user.id,
-                        profile
-                    }
-                ]
-            });
+                let file = path.join(__dirname, 'public', req.user.id, profile.avatar);
+
+                try {
+                    profile.image = await readFile(file);
+                }
+                catch (err) {
+                    file = path.join(__dirname, 'public', 'ava.png');
+                    profile.image = await readFile(file);
+                    profile.mimeType = 'image/png';
+                }
+
+                return this.model({
+                    users: [
+                        {
+                            id: req.user.id,
+                            profile
+                        }
+                    ]
+                });
+            }
         }
 
         async save(req, res) {
             let avatar = upload.single('image');
-            avatar(req, res, function (err) {
+            avatar(req, res, async function (err) {
 
                 if(err) throw err;
+                delete req.body.image;
+                await database.update('profile', {_id: req.body.id}, req.body);
 
+/*
                 let file = path.join(__dirname, 'public', req.user.id, req.body.file_name);
 
-                fs.writeFile(file, req.file.buffer, () => {
+
+                let raw = new Buffer(req.file.buffer.toString(), 'base64');
+
+                fs.writeFile(file, raw, function (err) {
+                    if (err) throw err;
                     console.log('saved');
-                    return {};
                 });
+*/
             })
         }
 

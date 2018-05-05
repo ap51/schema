@@ -72,7 +72,7 @@
 
                 <signin :visible="signin" @cancel="signin = false"></signin>
                 <signout :visible="signout" @cancel="signout = false"></signout>
-                <account :visible="account" :object="{...entity}" @cancel="account = false"></account>
+                <account v-if="auth.id" :visible="account" :object="{...entity}" @cancel="account = false"></account>
 
 <!--
                 <dialog-signin :visible="signin" @cancel="signin = false"></dialog-signin>
@@ -166,7 +166,7 @@
         },
         computed: {
             entity() {
-                return this.auth && this.entities.user[this.auth.id] || {};
+                return this.entities.user && this.entities.user[this.auth.id] || {};
             },
             active_tab: {
                 get() {
