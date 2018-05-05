@@ -22,8 +22,8 @@ const app = express();
 app.use('/:service/ui', staticFileMiddleware);
 
 app.use('/:service/ui', history({
-    disableDotRule: true,
-    verbose: false
+    disableDotRule: false,
+    verbose: true
 }));
 
 app.use('/:service/ui', staticFileMiddleware);

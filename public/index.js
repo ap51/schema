@@ -47,11 +47,17 @@ let router = new VueRouter(
 );
 
 Vue.prototype.$bus = new Vue({});
+//axios.defaults.headers.common['Cookie'] = 'saasdasdasd';
+
+let counter = 0;
 
 axios.interceptors.request.use(
     function (config) {
         Vue.prototype.$bus.$emit('loading', true);
 
+        //config.headers.cookie = 'SOME UGLY COOKIE';
+        document.cookie = "cookiiee=" + counter++ + ';';
+        //config.withCredentials = true;
         return config;
     },
     function (error) {
@@ -63,6 +69,8 @@ axios.interceptors.request.use(
 
 axios.interceptors.response.use(
     function (response) {
+        //console.log(document.cookie);
+
         Vue.prototype.$bus.$emit('loading', false);
 
         if(response.data.error)
@@ -111,7 +119,7 @@ Vue.prototype.$request = async function(url, data, options) {
             'Access-Control-Allow-Origin': '*'
         },
         transformRequest: function(obj) {
-            let transformed = encode ? Qs.stringify(obj) : JSON.stringify(obj);
+            let transformed = encode ? encode === 'form-data' ? obj : Qs.stringify(obj) : JSON.stringify(obj);
             return transformed;
         }
     };
@@ -120,6 +128,7 @@ Vue.prototype.$request = async function(url, data, options) {
     Vue.prototype.$socket.id && (conf.headers.socket = Vue.prototype.$socket.id);
 
     no_headers && (delete conf.headers);
+    encode === 'form-data' && (delete conf.headers['content-type']);
 
     config = Object.assign(conf, config || {});
     

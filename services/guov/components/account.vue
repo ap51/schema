@@ -67,7 +67,7 @@
             </v-card-actions>
         </v-card>
 
-        <profile :visible="profile" :object="{}" @cancel="profile = false"></profile>
+        <profile :visible="profile" :object="{...auth}" @cancel="profile = false"></profile>
 
     </v-dialog>
 </template>

@@ -4,6 +4,9 @@ const util = require('util');
 const normalizer = require('normalizr');
 const cheerio = require('cheerio');
 
+const multer  = require('multer');
+const upload = multer();
+
 const readFile = util.promisify(fs.readFile);
 const database = require('./database/db');
 const OAUTH = require('./oauth');
@@ -562,6 +565,57 @@ function Applications(SuperClass) {
     }
 }
 
+function Account(SuperClass) {
+
+    return class Account extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return {};
+        }
+
+        get() {
+
+        }
+
+    }
+}
+
+function Profile(SuperClass) {
+
+    return class Profile extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            return {};
+        }
+
+        get() {
+
+        }
+
+        async save(req, res) {
+            let avatar = upload.single('avatar');
+            avatar(req, res, function (err) {
+
+                if(err) throw err;
+
+                let file = path.join(__dirname, 'public', req.user.id, req.body.file_name);
+
+                fs.writeFile(file, req.file.buffer, () => {
+                    console.log('saved');
+                    return {};
+                });
+            })
+        }
+
+    }
+}
+
 let matrix = [
     {
         component: UI,
@@ -571,6 +625,14 @@ let matrix = [
                 component: Layout,
                 access: [],
                 children: [
+                    {
+                        component: Account,
+                        children: [
+                            {
+                                component: Profile
+                            }
+                        ]
+                    },
                     {
                         component: NotFound,
                     },
@@ -626,7 +688,7 @@ let matrix = [
     }
 ];
 
-const ignore = ['location', 'loader', 'account', 'profile', 'picture-input'];
+const ignore = ['location', 'loader', 'picture-input'];
 
 function Classes() {
 

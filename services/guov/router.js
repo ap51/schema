@@ -22,8 +22,8 @@ let router = express.Router();
 //const multer = require('multer');
 //router.upload = multer();
 
-router.use(bodyParser.json());
-router.use(bodyParser.urlencoded({extended: false}));
+router.use(express.json());
+router.use(express.urlencoded({extended: false}));
 
 
 let patterns = ['/:section/:component\::id\.:action', '/:section/:component\.:action', '/:section/:component\::id', '/:section/:component'];
@@ -171,6 +171,43 @@ let end = function(options) {
         res.end();
     }
 };
+router.all('/:section/:component/*', function(req, res, next) {
+    console.log(req.params);
+    next();
+});
+
+router.all(['/:section/files/*/:file', '/:section/files/:file'], [function(req, res, next) {
+    if(true /* req.user */) {
+
+        let options = {
+            root: __dirname + `/public`,
+            dotfiles: 'deny',
+/*             headers: {
+                'x-timestamp': Date.now(),
+                'x-sent': true
+            }
+ */
+        };
+        
+        req.params.path = req.params[0] ? `${req.params[0]}/${req.params.file}` : req.params.file;
+
+        console.log('IMAGE:', options.root, req.params.path);
+        let fileName = req.params.path;
+        res.sendFile(fileName, options, function (err) {
+            if (err) {
+                next(err);
+            }
+            else {
+                console.log('Sent:', fileName);
+                res.end();
+            }
+        });
+
+        //console.log(req.params);
+        //res.end();
+    }
+    else res.status(404).end('Not found.');
+}]);
 
 router.all(patterns, [jwtHandler(), async function(req, res, next) {
     //JWT ЗДЕСЬ
