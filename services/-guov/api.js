@@ -4,6 +4,8 @@ const util = require('util');
 const normalizer = require('normalizr');
 const cheerio = require('cheerio');
 
+const stat = util.promisify(fs.stat);
+const mkdir = util.promisify(fs.mkdir);
 const readFile = util.promisify(fs.readFile);
 const database = require('./database/db');
 const OAUTH = require('./oauth');
@@ -338,6 +340,71 @@ function Layout(SuperClass) {
     }
 }
 
+const neo4j = require('neo4j-driver').v1;
+
+const Docker = require('dockerode');
+
+let docker = new Docker({ //NOT WORKING SSL !!!
+    socketPath: '//./pipe/docker_engine', //check is win or linux !!!
+    /*
+    host: '127.0.0.1',
+    protocol: 'https',
+    ca: fs.readFileSync(path.join(__dirname , 'docker', 'ca.pem')),
+    cert: fs.readFileSync(path.join(__dirname , 'docker', 'cert.pem')),
+    key: fs.readFileSync(path.join(__dirname , 'docker', 'key.pem')),
+    port: 2375
+    */
+});
+
+let findContainer = async function ({name}) {
+    let containers = await docker.listContainers({all: true});
+
+    return containers.find((container) => {
+        let found = container.Names.find(tag => {
+            tag = tag.replace('/', '');
+            return tag === name;
+        });
+
+        return !!found;
+    });
+};
+
+let findImage = async function ({name}) {
+    let images = await docker.listImages({all: true});
+
+    return images.find((image) => {
+        let found = image.RepoTags.find(tag => {
+            return tag === name;
+        });
+
+        return !!found;
+    });
+};
+
+let pull = async function ({image, options}) {
+
+    const stream = await docker.pull(image, options || {});
+
+    return await new Promise(function (resolve, reject) {
+        stream.on('error', (err) => {
+            reject(err);
+        });
+
+
+        stream.on('data', (chunk) => {
+            //DO NOT REMOVE !!! DOESNT FIRE END EVENT WITHOUT THIS
+            console.log(chunk.length);
+        });
+
+
+        stream.on('end', async () => {
+            let downloaded = await findImage({name: image});
+            resolve(downloaded);
+        });
+    });
+
+};
+
 function SignIn(SuperClass) {
 
     return class SignIn extends SuperClass {
@@ -354,7 +421,7 @@ function SignIn(SuperClass) {
 
         async submit(req, res) {
             try {
-                //await router.authenticateHandler({force: true})(req, res);
+                //VALIDATE REQ.BODY WITH JOI THROUGH PROXY !!! !!!
                 let {client_id, client_secret, scope} = await database.findOne('client', {client_id: 'authenticate'});
 
                 req.body.username = req.body.email;
@@ -377,9 +444,93 @@ function SignIn(SuperClass) {
                 req.user = user;
                 req.client = client;
 
-                //this.$bus.emit('signedin');
+                let users_path = path.join(__dirname, 'users');
+                try {
+                    await stat(users_path);
+                }
+                catch (err) {
+                    await mkdir(users_path);
+                    await mkdir(path.join(users_path, 'common'));
+
+                    ['dbms', 'conf', 'plugins'].forEach(async folder => {
+                        folder = path.join(users_path, 'common', folder);
+                        await mkdir(folder);
+                    });
+                }
+
+                let user_path = path.join(__dirname, 'users', req.user.id);
+                try {
+                    await stat(user_path);
+                }
+                catch (err) {
+                    await mkdir(user_path);
+
+                    ['databases', 'files'].forEach(async folder => {
+                        folder = path.join(user_path, folder);
+                        await mkdir(folder);
+                    });
+                }
+
+                let image_name = 'neo4j';
+                let tag = 'latest';
+
+                let container = await findContainer({name: req.user.id});
+
+                if (!container) {
+                    let found = !!await findImage({name: `${image_name}:${tag}`});
+
+                    if (!found) {
+                        let image = await pull({image: `${image_name}:${tag}`});
+                        console.log(image);
+                    }
+
+                    let common_path = path.join(users_path, 'common');
+
+                    container = await docker.createContainer({
+                        image: `${image_name}:${tag}`,
+                        name: req.user.id,
+                        HostConfig: {
+                            PublishAllPorts: true,
+                            Binds: [
+                                `${path.join(common_path, 'dbms')}:/data/dbms`,
+                                `${path.join(common_path, 'conf')}:/conf`,
+                                `${path.join(common_path, 'plugins')}:/plugins`,
+
+                                `${path.join(user_path , 'databases')}:/data/databases`,
+                                `${path.join(user_path , 'files')}:/import`
+                            ]
+                        }
+                    });
+
+                }
+                else container = await docker.getContainer(container.Id);
+
+                let info = await container.inspect();
+
+                !info.State.Running && await container.start();
+                info = await container.inspect();
+
+                let bolt_port = info.NetworkSettings.Ports['7687/tcp'];
+                bolt_port = bolt_port.length && bolt_port[0].HostPort;
+
+                const driver = neo4j.driver(`bolt://localhost:${bolt_port}`, neo4j.auth.basic('neo4j', 'UserPassword'));
+
+                let session = driver.session();
+
+                let respond = await session.run('MERGE (james:Person {name : {nameParam} }) RETURN james.name AS name', {nameParam: 'James'});
+
+                respond.records.forEach(function (record) {
+                    console.log(record.get('name'));
+                });
+
+                session.close();
+
+                driver.close();
+
+                //req.token.data[req.user.id] = req.token.data[req.user.id] + 1 || 1;
 
                 return this.model({auth: user});
+
             }
             catch(err) {
                 res.status(err.code || 400).end(err.message);
@@ -404,10 +555,28 @@ function SignOut(SuperClass) {
         async submit(req, res) {
             await database.remove('token', {accessToken: req.token.secret.access_token}, {allow_empty: true});
 
+            //req.token.data[req.user.id] = req.token.data[req.user.id] - 1;
+
+/*
+            if(!req.token.data[req.user.id]) {
+                let container = await findContainer({name: req.user.id});
+                container && (container = await docker.getContainer(container.Id));
+                let info = container && await container.inspect();
+                info && info.State.Running && await container.stop();
+            }
+*/
+
+            let container = await findContainer({name: req.user.id});
+            container && (container = await docker.getContainer(container.Id));
+
+            let info = container && await container.inspect();
+            info && info.State.Running && await container.stop();
+
             req.token.secret = void 0;
 
             req.user = void 0;
             req.client = void 0;
+
 
             return this.model({auth: void 0});
         }

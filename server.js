@@ -113,33 +113,38 @@ if(cluster.isWorker) {
 ////////////////////////////
     fs.readdir('./services/', (err, dirs) => {
         dirs.forEach(async dir => {
-            console.log(dir);
-            try {
-                const io = require('socket.io')(httpsServer, {
-                    path: `/${dir}/_socket_`
-                });
 
-                name_spaces[`${dir}:${cluster.worker.id}`] = io.of(`/${dir}`);
+            if(dir[0] !== '-') {
+                console.log(dir);
 
-                name_spaces[`${dir}:${cluster.worker.id}`].on('connection', function(client){
-                    name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`] = client;
-
-                    client.on('disconnect', function(){
-                        delete name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`];
+                try {
+                    const io = require('socket.io')(httpsServer, {
+                        path: `/${dir}/_socket_`
                     });
 
-                });
+                    name_spaces[`${dir}:${cluster.worker.id}`] = io.of(`/${dir}`);
+
+                    name_spaces[`${dir}:${cluster.worker.id}`].on('connection', function (client) {
+                        name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`] = client;
+
+                        client.on('disconnect', function (...args) {
+                            console.log(args);
+                            delete name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`];
+                        });
+
+                    });
 
 
-                app.use(`/${dir}/`, (req, res, next) => {
-                    req.$io = name_spaces[`${dir}:${cluster.worker.id}`];
-                    next();
-                });
+                    app.use(`/${dir}/`, (req, res, next) => {
+                        req.$io = name_spaces[`${dir}:${cluster.worker.id}`];
+                        next();
+                    });
 
-                app.use(`/${dir}/`, require(`./services/${dir}/router`).router);
-            }
-            catch (err) {
-                console.log(err);
+                    app.use(`/${dir}/`, require(`./services/${dir}/router`).router);
+                }
+                catch (err) {
+                    console.log(err);
+                }
             }
         });
 

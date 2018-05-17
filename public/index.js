@@ -202,9 +202,11 @@ Vue.prototype.$request = async function(url, data, options) {
                     Vue.set(Vue.prototype.$state, 'api', api);
                     Vue.set(Vue.prototype.$state, 'entry', entry);
 
-                    res.config.method.toUpperCase() === 'GET' && merge.profile && res.data.auth && res.data.entities && res.data.entities.profile && (merge.profile[res.data.auth.id].image = res.data.entities.profile[res.data.auth.id].image);
+                    //res.config.method.toUpperCase() === 'GET' && merge.profile && res.data.auth && res.data.entities && res.data.entities.profile && (merge.profile[res.data.auth.id].image = res.data.entities.profile[res.data.auth.id].image);
 
                     Vue.set(Vue.prototype.$state, 'entities', merge);
+
+                    Vue.prototype.$bus.$emit(`merge:${path.name}`, res.data.entities);
 
                     break;
                 case 3: //error
