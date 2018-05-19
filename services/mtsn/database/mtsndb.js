@@ -56,15 +56,19 @@ db.pull = async function ({image, options}) {
             reject(err);
         });
 
-
         stream.on('data', (chunk) => {
             //DO NOT REMOVE !!! DOESNT FIRE END EVENT WITHOUT THIS
+/*          THIS IN modem.js buildRsponse >>>>
+            if (!context.hijack && !context.openStdin && (!(typeof data === "string" || Buffer.isBuffer(data)) || data === undefined)) {
+                req.end();
+            }
+*/
+
             console.log(chunk.length);
         });
 
-
         stream.on('end', async () => {
-            let downloaded = await findImage({name: image});
+            let downloaded = await db.findImage({name: image});
             resolve(downloaded);
         });
     });

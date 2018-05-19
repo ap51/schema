@@ -57,7 +57,7 @@
             </v-card-actions>
         </v-card>
 
-        <profile :visible="dialogs.profile.visible" :object="dialogs.profile.object" @cancel="profile(false)"></profile>
+        <profile :visible="dialogs.profile.visible" :object="dialogs.profile.object" @cancel="profile(false)" @save="profileSave"></profile>
 
     </v-dialog>
 </template>
@@ -114,9 +114,33 @@
 
                     this.$request('account.save', user, {callback: this.cancel});
 
+                    if(this.dialogs.profile.changed) {
+                        let data = new FormData();
+                        let fields = Object.entries(this.entity);
+
+                        fields.forEach(item => {
+                            let [name, value] = item;
+                            data.append(name, value);
+                        });
+
+                        this.$request('profile.save', data, {
+                            encode: 'form-data',
+                            callback: this.cancel
+                        });
+                    }
+
                     //delete this.object.password;
                 }
                 else this.$bus.$emit('snackbar', 'Data entered don\'t match validation rules');
+            },
+            profileSave(profile) {
+                //this.dialogs.profile.data = profile;
+                this.dialogs.profile.changed = true;
+
+                let user_id = this.auth.id || 0;
+                Object.assign(this.entity, profile);
+
+                this.profile(false);
             }
         },
         watch: {

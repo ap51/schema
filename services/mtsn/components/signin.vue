@@ -43,7 +43,7 @@
 
         </v-card>
 
-        <account :visible="dialogs.signup.visible" :object="dialogs.signup.object" @cancel="signup(false)"></account>
+        <signup :visible="dialogs.signup.visible" :object="dialogs.signup.object" @cancel="signup(false)"></signup>
 
     </v-dialog>
 </template>
@@ -55,7 +55,7 @@
     module.exports = {
         extends: component,
         components: {
-            'account': httpVueLoader('account'),
+            'signup': httpVueLoader('account'),
         },
         props: [
             'visible'
@@ -72,6 +72,7 @@
         },
         methods: {
             signup(visible) {
+                //visible && this.$emit('cancel');
                 visible && (this.dialogs.signup.object = this.entities.user[0]);
                 !visible && (this.dialogs.signup.object = void 0);
                 this.dialogs.signup.visible = visible;

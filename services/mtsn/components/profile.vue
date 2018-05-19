@@ -95,9 +95,12 @@
             image() {
                 //!this.blob && this.object.image && (this.blob = this.object.image);
                 if(!this.blob && this.entity.image) {
-                    let binary = new Uint8Array(this.entity.image.data);
-                    let blob = new Blob([binary], {type: this.entity.mimeType});
-                    blob.size ? this.createImage(blob) : this.blob = this.entity.image;
+                    if(this.entity.image.data) {
+                        let binary = new Uint8Array(this.entity.image.data);
+                        let blob = new Blob([binary], {type: this.entity.mimeType});
+                        blob.size ? this.createImage(blob) : this.blob = this.entity.image;
+                    }
+                    else this.blob = URL.createObjectURL(this.entity.image);
                     //this.blob = blob;
                 }
 
@@ -173,13 +176,21 @@
                         data.append(name, value);
                     });
 
-                    let blob = this.dataURItoBlob(this.$refs.avatar.src);
-                    //let blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
+                    let blob = void 0;
+                    try {
+                        blob = this.dataURItoBlob(this.$refs.avatar.src);
+                    }
+                    catch (err) {
+                        blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
+                    }
                     data.append('image', blob);
                     this.createImage(blob);
 
                     Object.assign(this.object, this.entity);
-                    this.$request('profile.save', data, {encode: 'form-data', callback: this.cancel});
+                    //this.$request('profile.save', data, {encode: 'form-data', callback: this.cancel});
+                    this.entity.image = blob;
+                    //this.$emit('save', data);
+                    this.$emit('save', this.entity);
                 }
                 else this.$bus.$emit('snackbar', 'Data entered don\'t match validation rules');
 

@@ -49,8 +49,8 @@ model.getAuthorizationCode = async function(authorizationCode, callback) {
 model.getUser = async function(username, password, callback) {
     try {
         let user = await db.findOne('user', {email:  username});
-        let profile = await db.findOne('profile', {user:  user.id});
-        user.public_id = profile.public_id;
+        //let profile = await db.findOne('profile', {user:  user.id});
+        //user.public_id = profile.public_id;
 
         if (password !== null && user.password !== password)
             callback();

@@ -355,6 +355,86 @@ function Layout(SuperClass) {
             return this.model({auth: req.user});
         }
 
+        async initialization(req, res) {
+            let users_path = path.join(__dirname, 'users');
+            try {
+                await stat(users_path);
+            }
+            catch (err) {
+                await mkdir(users_path);
+                await mkdir(path.join(users_path, 'common'));
+
+                ['dbms', 'conf', 'plugins', 'databases'].forEach(async folder => {
+                    folder = path.join(users_path, 'common', folder);
+                    await mkdir(folder);
+                });
+            }
+
+            let user_path = path.join(__dirname, 'users', req.user.id);
+            try {
+                await stat(user_path);
+            }
+            catch (err) {
+                await mkdir(user_path);
+
+                ['databases', 'files'].forEach(async folder => {
+                    folder = path.join(user_path, folder);
+                    await mkdir(folder);
+                });
+            }
+
+            let image_name = 'neo4j';
+            let tag = 'latest';
+
+            //let container = await mtsndb.findContainer({name: req.user.id});
+            let container = await mtsndb.findContainer({name: 'MTSN'});
+
+            if (!container) {
+                let found = !!await mtsndb.findImage({name: `${image_name}:${tag}`});
+
+                if (!found) {
+                    let image = await mtsndb.pull({image: `${image_name}:${tag}`});
+                    console.log(image);
+                }
+
+                let common_path = path.join(users_path, 'common');
+
+                container = await mtsndb.docker.createContainer({
+                    image: `${image_name}:${tag}`,
+                    name: 'MTSN',
+                    //name: req.user.id,
+                    HostConfig: {
+                        PublishAllPorts: true,
+                        Binds: [
+                            `${path.join(common_path, 'dbms')}:/data/dbms`,
+                            `${path.join(common_path, 'conf')}:/conf`,
+                            `${path.join(common_path, 'plugins')}:/plugins`,
+                            `${path.join(common_path, 'databases')}:/data/databases`,
+
+                            //`${path.join(user_path, 'databases')}:/data/databases`,
+                            `${path.join(user_path, 'files')}:/import`
+                        ]
+                    }
+                });
+
+            }
+            else container = await mtsndb.docker.getContainer(container.Id);
+
+            let info = await container.inspect();
+
+            !info.State.Running && await container.start();
+            info = await container.inspect();
+
+            let bolt_port = info.NetworkSettings.Ports['7687/tcp'];
+            bolt_port = bolt_port.length && bolt_port[0].HostPort;
+
+            const driver = mtsndb.driver(bolt_port);
+            let records = await mtsndb.CQL({driver, query: 'MERGE (james:Person {name : {nameParam} }) RETURN james.name AS name', params: {nameParam: 'James'}});
+
+            records.forEach(function (record) {
+                console.log(record.get('name'));
+            });
+        }
 /*
         update(req, res) {
             let component_data = {status: 4};
@@ -406,7 +486,9 @@ function SignIn(SuperClass) {
                 req.user = user;
                 req.client = client;
 
-                let users_path = path.join(__dirname, 'users');
+                await this.initialization(req, res);
+
+                /*let users_path = path.join(__dirname, 'users');
                 try {
                     await stat(users_path);
                 }
@@ -483,7 +565,7 @@ function SignIn(SuperClass) {
 
                 records.forEach(function (record) {
                     console.log(record.get('name'));
-                });
+                });*/
 
                 return this.model({auth: user});
 
@@ -750,7 +832,7 @@ function Account(SuperClass) {
 
                 let user = await database.findOne('user', {email: req.body.email}, {allow_empty: true});
 
-                if(user && user.id !== req.user.id) {
+                if(user && req.user && user.id !== req.user.id) {
                     throw new CustomError(403, 'EMail is invalid');
                 }
 
@@ -758,16 +840,21 @@ function Account(SuperClass) {
                     throw new CustomError(403, 'Password cannot be empty');
                 }
 
-                let updates = await database.update('user', {_id: req.body.id}, req.body);
+                let {name, email, password, group} = req.body;
+
+                let updates = await database.update('user', {_id: req.body.id}, {name, email, password, group});
                 user = updates[0];
 
                 user.password = void 0;
 
-                let {id, name, group, public_id, email} = user;
-                req.token.secret.user = {id, name, group, public_id, email};
-                req.user = req.token.secret.user;
+                let {id, public_id} = user;
 
-                return this.model({auth: user});
+                req.user = {id, name, group, public_id, email};
+                req.token.secret = {user: req.user};
+
+                await this.initialization(req, res);
+
+                return this.model({auth: req.user});
             }
         }
 
@@ -836,8 +923,10 @@ function Profile(SuperClass) {
                     if(err)
                         reject(err);
 
-                    delete req.body.image;
-                    await database.update('profile', {_id: req.body.id}, req.body);
+                    let {user, public_id, status, avatar} = req.body;
+                    //delete req.body.image;
+
+                    await database.update('profile', {_id: req.body.id}, {user, public_id, status, avatar});
 
                     resolve(await self.get(req, res));
                 })
