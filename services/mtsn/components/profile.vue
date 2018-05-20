@@ -1,6 +1,6 @@
 <template>
 
-    <v-dialog v-if="visible" v-model="visible" persistent max-width="400px">
+    <v-dialog v-model="visible" persistent max-width="400px">
         <v-card flat >
             <v-card-title>
                 <v-icon class="mr-1 blue--text text--darken-2">fas fa-user-circle</v-icon>

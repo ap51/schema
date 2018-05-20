@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-if="visible" v-model="visible" persistent max-width="500px">
+    <v-dialog v-model="visible" persistent max-width="500px">
 
         <v-card>
             <v-card-title>

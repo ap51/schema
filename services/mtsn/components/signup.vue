@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-if="visible" v-model="visible" persistent max-width="400px" content-class="dlg">
+    <v-dialog v-model="visible" persistent max-width="400px" content-class="dlg">
         <account-card title="sign up" :object="object" @cancel="cancel" @saved="saved" @save="save"></account-card>
     </v-dialog>
 </template>
