@@ -401,7 +401,7 @@ window.vm = new Vue({
 
         this.$socket.on('message', (...args) => {
             //console.log('MESSAGE:', this.$socket.id, args); // 'G5p5...'
-            this.$bus.$emit('snackbar', args, 'blue darken-2');
+            //this.$bus.$emit('snackbar', args, 'blue darken-2');
         });
     },
     computed: {
