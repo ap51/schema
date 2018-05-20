@@ -72,6 +72,13 @@ if(cluster.isMaster) {
         }
     });
 
+    process.$bus.on('socket', async (socket_id, name, ...args) => {
+        //console.log('broadcast TO SOCKET:', socket_id);
+        let worker = args.pop();
+
+        process.$bus.broadcast('socket', socket_id, name, ...args);
+    });
+
     /////////////////////////////////////////////////////////////////
 /*
     process.$bus.on('event', (...args) => {
@@ -108,6 +115,12 @@ if(cluster.isWorker) {
     });
 */
 
+    process.$bus.on('socket', (socket_id, name, ...args) => {
+        //console.log('SOCKET SEND:', socket_id, name_spaces_sockets);
+        let socket = name_spaces_sockets[socket_id];
+        socket && socket.emit(name, ...args);
+    });
+
 
 
 ////////////////////////////
@@ -125,11 +138,14 @@ if(cluster.isWorker) {
                     name_spaces[`${dir}:${cluster.worker.id}`] = io.of(`/${dir}`);
 
                     name_spaces[`${dir}:${cluster.worker.id}`].on('connection', function (client) {
-                        name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`] = client;
+                        //name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`] = client;
+                        name_spaces_sockets[client.id] = client;
+
+                        process.$socket = client;
 
                         client.on('disconnect', function (...args) {
                             console.log(args);
-                            delete name_spaces_sockets[`${dir}:${cluster.worker.id}:${client.id}`];
+                            delete name_spaces_sockets[client.id];
                         });
 
                     });

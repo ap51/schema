@@ -34,9 +34,13 @@ function MessageBus() {
             let [id, child] = item;
 
             try {
-                sender ? sender !== child && child.send(message) : child.send(message);
+
+                sender ? sender !== child && child.send(event, ...args) : child.send(event, ...args);
+                //console.log('MESSAGE SENT:', message);
             }
             catch (err) {
+                console.log('BROADCAST EXCEPTION:', event, err);
+
                 delete children[child.id];
             }
         })
@@ -55,6 +59,9 @@ function MessageBus() {
 
             child.on('message', msg => {
                 let {event, args} = msg;
+
+                //console.log('ON MESSAGE:', event, args);
+
                 if (event.toUpperCase() === 'BROADCAST') {
                     _broadcast(child, msg._event, ...args);
                 }
@@ -64,7 +71,13 @@ function MessageBus() {
         else {
             child.on('message', (msg) => {
                 let {event, args} = msg;
-                emitter.$emit(event, ...args); //self worker trigger on
+                try {
+                    emitter.$emit(event, ...args); //self worker trigger on
+                    //console.log('EMITED:', event);
+                }
+                catch (err) {
+                    console.log('emitter:', emitter);
+                }
             });
         }
     }

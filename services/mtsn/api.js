@@ -1,8 +1,11 @@
+'use strict'
+
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const normalizer = require('normalizr');
 const cheerio = require('cheerio');
+const axios = require('axios');
 
 const stat = util.promisify(fs.stat);
 const mkdir = util.promisify(fs.mkdir);
@@ -85,11 +88,14 @@ const avatar_upload = multer({
 class Base {
     constructor(params) {
 
-        let {access, scope, user, client, id, bus, name, socket} = params || {};
+        let {access, scope, user, client, id, bus, name, socket, req, res} = params || {};
+        this.req = req;
+        this.res = res;
+
         this.id = id;
         this.$bus = bus;
         this.$name = name;
-        this.socket = socket;
+        this.$socket = socket;
 
         this.access = access || [];
         this.scope = scope || [];
@@ -99,6 +105,7 @@ class Base {
         this.status = 0;
         this.reload = false;
 
+        this.$request = axios;
 
         let self = this;
 
@@ -173,6 +180,13 @@ class Base {
         }
     }
 
+    sendMessage(name, ...args) {
+        let socket_id = this.req.headers['socket'];
+        socket_id && (process.$socket === socket_id ? process.$socket.emit(name, ...args) : process.$bus.emit('socket', socket_id, name, ...args));
+        //process.$socket && process.$socket.emit(name, ...args);
+        //console.log('SEND TO SOCKET:', socket_id);
+    }
+
     model(data) {
 
     }
@@ -225,9 +239,12 @@ function UI(SuperClass) {
 
             let schema = normalizer.schema;
 
+            const _profile = new schema.Entity('profile', {});
+/*
             const _profile = new schema.Entity('profile', {}, {
                 idAttribute: 'user' // to use not standard ID
             });
+*/
 
             const _phone = new schema.Entity('phone', {});
             const _post = new schema.Entity('post', {});
@@ -351,7 +368,9 @@ function Layout(SuperClass) {
 
         }
 
-        get(req, res) {
+        async get(req, res) {
+            this.sendMessage('message');
+
             return this.model({auth: req.user});
         }
 
@@ -364,7 +383,7 @@ function Layout(SuperClass) {
                 await mkdir(users_path);
                 await mkdir(path.join(users_path, 'common'));
 
-                ['dbms', 'conf', 'plugins', 'databases'].forEach(async folder => {
+                ['dbms', 'conf', 'plugins', 'databases', 'files'].forEach(async folder => {
                     folder = path.join(users_path, 'common', folder);
                     await mkdir(folder);
                 });
@@ -383,65 +402,27 @@ function Layout(SuperClass) {
                 });
             }
 
-            let image_name = 'neo4j';
-            let tag = 'latest';
+            let common_port = await mtsndb.startContainer({users_path});
+            let user_port = req.user && await mtsndb.startContainer({container_name: req.user.id, users_path});
 
-            //let container = await mtsndb.findContainer({name: req.user.id});
-            let container = await mtsndb.findContainer({name: 'MTSN'});
+            req.token.secret.common_port = common_port;
+            req.token.secret.user_port = user_port;
 
-            if (!container) {
-                let found = !!await mtsndb.findImage({name: `${image_name}:${tag}`});
-
-                if (!found) {
-                    let image = await mtsndb.pull({image: `${image_name}:${tag}`});
-                    console.log(image);
-                }
-
-                let common_path = path.join(users_path, 'common');
-
-                container = await mtsndb.docker.createContainer({
-                    image: `${image_name}:${tag}`,
-                    name: 'MTSN',
-                    //name: req.user.id,
-                    HostConfig: {
-                        PublishAllPorts: true,
-                        Binds: [
-                            `${path.join(common_path, 'dbms')}:/data/dbms`,
-                            `${path.join(common_path, 'conf')}:/conf`,
-                            `${path.join(common_path, 'plugins')}:/plugins`,
-                            `${path.join(common_path, 'databases')}:/data/databases`,
-
-                            //`${path.join(user_path, 'databases')}:/data/databases`,
-                            `${path.join(user_path, 'files')}:/import`
-                        ]
-                    }
-                });
-
-            }
-            else container = await mtsndb.docker.getContainer(container.Id);
-
-            let info = await container.inspect();
-
-            !info.State.Running && await container.start();
-            info = await container.inspect();
-
-            let bolt_port = info.NetworkSettings.Ports['7687/tcp'];
-            bolt_port = bolt_port.length && bolt_port[0].HostPort;
-
-            const driver = mtsndb.driver(bolt_port);
+            const driver = mtsndb.driver(common_port);
             let records = await mtsndb.CQL({driver, query: 'MERGE (james:Person {name : {nameParam} }) RETURN james.name AS name', params: {nameParam: 'James'}});
 
             records.forEach(function (record) {
                 console.log(record.get('name'));
             });
+
+
         }
-/*
         update(req, res) {
             let component_data = {status: 4};
             component_data[this.name.toLowerCase()] = this.data;
             return component_data;
+            //return this.data
         }
-*/
 
     }
 }
@@ -461,9 +442,22 @@ function SignIn(SuperClass) {
             };
         }
 
+        async get() {
+            let users_path = path.join(__dirname, 'users');
+            try {
+                await mtsndb.startContainer({users_path});
+                console.log('CONTAINER STARTED');
+            }
+            catch (err){
+                console.log('ERROR START CONTAINER');
+            }
+        }
+
         async submit(req, res) {
             try {
                 //VALIDATE REQ.BODY WITH JOI THROUGH PROXY !!! !!!
+                this.sendMessage('message', 'signin', 'stage:1');
+
                 let {client_id, client_secret, scope} = await database.findOne('client', {client_id: 'authenticate'});
 
                 req.body.username = req.body.email;
@@ -486,86 +480,9 @@ function SignIn(SuperClass) {
                 req.user = user;
                 req.client = client;
 
+                this.sendMessage('message', 'signin', 'stage:2');
+
                 await this.initialization(req, res);
-
-                /*let users_path = path.join(__dirname, 'users');
-                try {
-                    await stat(users_path);
-                }
-                catch (err) {
-                    await mkdir(users_path);
-                    await mkdir(path.join(users_path, 'common'));
-
-                    ['dbms', 'conf', 'plugins', 'databases'].forEach(async folder => {
-                        folder = path.join(users_path, 'common', folder);
-                        await mkdir(folder);
-                    });
-                }
-
-                let user_path = path.join(__dirname, 'users', req.user.id);
-                try {
-                    await stat(user_path);
-                }
-                catch (err) {
-                    await mkdir(user_path);
-
-                    ['databases', 'files'].forEach(async folder => {
-                        folder = path.join(user_path, folder);
-                        await mkdir(folder);
-                    });
-                }
-
-                let image_name = 'neo4j';
-                let tag = 'latest';
-
-                //let container = await mtsndb.findContainer({name: req.user.id});
-                let container = await mtsndb.findContainer({name: 'MTSN'});
-
-                if (!container) {
-                    let found = !!await mtsndb.findImage({name: `${image_name}:${tag}`});
-
-                    if (!found) {
-                        let image = await mtsndb.pull({image: `${image_name}:${tag}`});
-                        console.log(image);
-                    }
-
-                    let common_path = path.join(users_path, 'common');
-
-                    container = await mtsndb.docker.createContainer({
-                        image: `${image_name}:${tag}`,
-                        name: 'MTSN',
-                        //name: req.user.id,
-                        HostConfig: {
-                            PublishAllPorts: true,
-                            Binds: [
-                                `${path.join(common_path, 'dbms')}:/data/dbms`,
-                                `${path.join(common_path, 'conf')}:/conf`,
-                                `${path.join(common_path, 'plugins')}:/plugins`,
-                                `${path.join(common_path, 'databases')}:/data/databases`,
-
-                                //`${path.join(user_path, 'databases')}:/data/databases`,
-                                `${path.join(user_path, 'files')}:/import`
-                            ]
-                        }
-                    });
-
-                }
-                else container = await mtsndb.docker.getContainer(container.Id);
-
-                let info = await container.inspect();
-
-                !info.State.Running && await container.start();
-                info = await container.inspect();
-
-                let bolt_port = info.NetworkSettings.Ports['7687/tcp'];
-                bolt_port = bolt_port.length && bolt_port[0].HostPort;
-
-                const driver = mtsndb.driver(bolt_port);
-                let records = await mtsndb.CQL({driver, query: 'MERGE (james:Person {name : {nameParam} }) RETURN james.name AS name', params: {nameParam: 'James'}});
-
-                records.forEach(function (record) {
-                    console.log(record.get('name'));
-                });*/
 
                 return this.model({auth: user});
 
@@ -593,13 +510,11 @@ function SignOut(SuperClass) {
         async submit(req, res) {
             await database.remove('token', {accessToken: req.token.secret.access_token}, {allow_empty: true});
 
-/*
             let container = await mtsndb.findContainer({name: req.user.id});
             container && (container = await mtsndb.docker.getContainer(container.Id));
 
             let info = container && await container.inspect();
             info && info.State.Running && await container.stop();
-*/
 
             req.token.secret = void 0;
 
@@ -718,8 +633,28 @@ function Private(SuperClass) {
             };
         }
 
-        get() {
+        async get(req, res) {
+            let ProfileClass = new Profile(UI(Base));
+            let profile = new ProfileClass({req, res});
 
+            let data = await profile.get(req, res);
+
+            return data;
+
+/*
+            let user_id = this.req.user && this.req.user.id;
+            let profile = await database.findOne('profile', {user: user_id}, {allow_empty: true});
+
+            if(profile)
+                return this.model({
+                    users: [
+                        {
+                            id: user_id,
+                            profile
+                        }
+                    ]
+                })
+*/
         }
 
     }
@@ -740,6 +675,7 @@ function Friends(SuperClass) {
             if(req.user) {
                 let friends = await database.find('friend', {user: req.user.id}, {allow_empty: true});
                 friends = friends.map(record => record.friend);
+
                 let users = await database.find('user', {_id: {$in: friends}}, {allow_empty: true});
                 let profiles = await database.find('profile', {user: {$in: friends}}, {allow_empty: true});
 
@@ -813,49 +749,51 @@ function Account(SuperClass) {
 
         get(req, res) {
             console.log();
-            if(!req.user) {
-                return this.model({
-                    users: [
-                        {
-                            id: 0,
-                            name: 'some user',
-                            email: 'a@a.a'
-                        }
-                    ]
-                });
-            }
+            return {};
         }
 
         async save(req, res) {
-            if(true /*req.user*/) {
-                //JOI TO VALIDATE BODY
+            //JOI TO VALIDATE BODY
 
-                let user = await database.findOne('user', {email: req.body.email}, {allow_empty: true});
 
-                if(user && req.user && user.id !== req.user.id) {
+            /*
+                        let model = this.model({
+                            users: [
+                                req.body
+                            ]
+                        });
+
+                        let users = Object.keys(model.entities.user);
+
+                        if(users.length > 1) {
+                            throw new CustomError(400, 'Trying to update multiply accounts');
+                        }
+            */
+
+            if (req.user) {
+                let {id, name, email, password, group = 'users'} = req.body;
+
+                //model.entities.profile
+
+                let user = await database.findOne('user', {email}, {allow_empty: true});
+
+                if (user && user.id !== req.user.id) {
                     throw new CustomError(403, 'EMail is invalid');
                 }
 
-                if(!user && !req.body.password) {
+                if (!user && !password) {
                     throw new CustomError(403, 'Password cannot be empty');
                 }
 
-                let {name, email, password, group} = req.body;
-
-                let updates = await database.update('user', {_id: req.body.id}, {name, email, password, group});
+                let updates = await database.update('user', {_id: id}, {name, email, password, group});
                 user = updates[0];
 
-                user.password = void 0;
-
-                let {id, public_id} = user;
-
-                req.user = {id, name, group, public_id, email};
+                req.user = {id: user.id, name, group, email};
                 req.token.secret = {user: req.user};
-
-                await this.initialization(req, res);
 
                 return this.model({auth: req.user});
             }
+            else throw new CustomError(404, 'User not signed in');
         }
 
     }
@@ -872,46 +810,79 @@ function Profile(SuperClass) {
             return {};
         }
 
-        async get(req, res) {
-            if(req.user) {
-                let profile = await database.findOne('profile', {user: req.user.id});
+        base64_encode(file, mime_type) {
+            // read binary data
+            let bitmap = fs.readFileSync(file);
+            // convert binary data to base64 encoded string
+            return `data:${mime_type};base64,${new Buffer(bitmap).toString('base64')}`;
+        }
 
-                let file = path.join(__dirname, 'users', req.user.id, 'files', profile.avatar);
+// function to create file from base64 encoded string
+        base64_decode(base64str, file) {
+            // create buffer object from base64 encoded string, it is important to tell the constructor that the string is base64 encoded
+            let bitmap = new Buffer(base64str, 'base64');
+            // write buffer to file
+            fs.writeFileSync(file, bitmap);
+            console.log('******** File created from base64 encoded string ********');
+        }
+
+/*
+// convert image to base64 encoded string
+        var base64str = base64_encode('kitten.jpg');
+        console.log(base64str);
+// convert base64 string back to image
+        base64_decode(base64str, 'copy.jpg');
+*/
+
+        async get(req, res) {
+            let profile = void 0;
+
+            req.user && (profile = await database.findOne('profile', {user: req.user.id}, {allow_empty: true}));
+
+            if(!profile) {
+                let api_res = await this.$request({url: 'https://randomuser.me/api', method: 'get'});
+
+                let generated = api_res.data.results[0];
+
+                profile = {
+                    id: '0',
+                    user: (req.user && req.user.id) || '0',
+                    avatar: 'ava.png',
+                    public_id: generated.login.username,
+                    status: generated.phone
+                };
+
+            }
+
+            this.sendMessage('message', 'profile', 'created');
+
+            if(profile) {
+                let {id, mime_type, user, public_id, status, avatar} = profile;
+
+                let file = path.join(__dirname, 'users', user, 'files', avatar || 'ava.png');
 
                 try {
-                    profile.image = await readFile(file);
+                    profile.image_data = this.base64_encode(file, mime_type);
                 }
                 catch (err) {
                     file = path.join(__dirname, 'public', 'ava.png');
-                    profile.image = await readFile(file);
-                    profile.mimeType = 'image/png';
+
+                    profile.mime_type = 'image/png';
+                    profile.image_data = this.base64_encode(file, 'image/png');
                 }
+
+                let {image_data} = profile;
 
                 return this.model({
                     users: [
                         {
-                            id: req.user.id,
-                            profile
+                            id: user,
+                            profile: {id, image_data, mime_type, user, public_id, status, avatar}
                         }
                     ]
                 });
             }
-            else {
-                return this.model({
-                    users: [
-                        {
-                            id: 0,
-                            profile: {
-                                id: 0,
-                                user: 0,
-                                image: 'files/ava.png',
-                                public_id: generate('0123456789abcdefghijklmnopqrstuvwxyz', 5),
-                                status: 'status string'
-                            }
-                        }
-                    ]
-                });
-            }
+
         }
 
         async save(req, res) {
@@ -920,21 +891,101 @@ function Profile(SuperClass) {
             return new Promise(function (resolve, reject) {
                 avatar(req, res, async function (err) {
 
-                    if(err)
-                        reject(err);
+                    if(!err) {
+                        let {id, user, public_id, status, avatar, mime_type} = req.body;
 
-                    let {user, public_id, status, avatar} = req.body;
-                    //delete req.body.image;
+                        await database.update('profile', {_id: id}, {id, user, public_id, status, avatar, mime_type});
 
-                    await database.update('profile', {_id: req.body.id}, {user, public_id, status, avatar});
+                        resolve(await self.get(req, res));
+                    }
+                    else reject(err);
 
-                    resolve(await self.get(req, res));
                 })
             });
         }
 
     }
 }
+
+function SignUp(SuperClass) {
+
+    return class SignUp extends SuperClass {
+        constructor(...args) {
+            super(...args);
+        }
+
+        get data() {
+            console.log();
+            return {};
+        }
+
+        async get(req, res) {
+            let config = {
+                url: 'https://randomuser.me/api',
+                method: 'get',
+            };
+
+            let api_res = await this.$request(config);
+
+            let generated = api_res.data.results[0];
+
+            return this.model({
+                users: [
+                    {
+                        id: 0,
+                        name: `${generated.name.title}. ${generated.name.first} ${generated.name.last}`,
+                        email: generated.email,
+                        password: generated.login.password,
+/*
+                        profile: {
+                            id: 0,
+                            user: 0,
+                            avatar: 'ava.png',
+                            public_id: generated.login.username, //generate('0123456789abcdefghijklmnopqrstuvwxyz', 5),
+                            status: generated.phone
+                        }
+*/
+                    }
+                ]
+            });
+        }
+
+        async save(req, res) {
+            //JOI TO VALIDATE BODY
+
+            let {id, name, email, password, group = 'users'} =  req.body;
+
+            let user = await database.findOne('user', {email}, {allow_empty: true});
+
+            if(user) {
+                throw new CustomError(403, 'User already exists. Sign in, please');
+            }
+
+            if(!password) {
+                throw new CustomError(403, 'Password cannot be empty');
+            }
+
+            let updates = await database.update('user', {_id: id}, {name, email, password, group});
+            user = updates[0];
+
+            req.user = {id: user.id, name, group, email};
+            req.token.secret = {user: req.user};
+
+            await this.initialization(req, res);
+
+            const driver = mtsndb.driver(req.token.secret.common_port);
+            let records = await mtsndb.CQL({driver, query: 'MERGE (james:Person {name : {nameParam} }) RETURN james.name AS name', params: {nameParam: req.user.id}});
+
+            records.forEach(function (record) {
+                console.log(record.get('name'));
+            });
+
+            return this.model({auth: req.user});
+        }
+
+    }
+}
+
 
 let matrix = [
     {
@@ -958,6 +1009,16 @@ let matrix = [
                     },
                     {
                         component: SignIn,
+                        children: [
+                            {
+                                component: SignUp,
+                                children: [
+                                    {
+                                        component: Profile
+                                    }
+                                ]
+                            }
+                        ]
                     },
                     {
                         component: SignOut,
@@ -978,7 +1039,7 @@ let matrix = [
                     },
                     {
                         component: Private,
-                        access: ['sfc:*', 'get:admins'], //'method:access_group'
+                        access: ['sfc:*', 'get:*'], //'method:access_group'
                         scope: ['web'],
                         children: [
                             {
@@ -1008,7 +1069,7 @@ let matrix = [
     }
 ];
 
-const ignore = ['location', 'loader', 'picture-input'];
+const ignore = ['location', 'loader', 'picture-input', 'account-card'];
 
 function Classes() {
 
@@ -1045,6 +1106,13 @@ function Classes() {
         }, {});
     }
 }
+
+/*
+(async function () {
+    let users_path = path.join(__dirname, 'users');
+    await mtsndb.startContainer({users_path});
+})();
+*/
 
 module.exports = {
     Classes

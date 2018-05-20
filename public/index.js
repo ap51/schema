@@ -125,9 +125,10 @@ Vue.prototype.$request = async function(url, data, options) {
     };
 
     Vue.prototype.$state.token && (conf.headers.token = Vue.prototype.$state.token);
+    no_headers && (delete conf.headers);
+
     Vue.prototype.$socket.id && (conf.headers.socket = Vue.prototype.$socket.id);
 
-    no_headers && (delete conf.headers);
     encode === 'form-data' && (delete conf.headers['content-type']);
 
     config = Object.assign(conf, config || {});
@@ -346,7 +347,7 @@ let component = {
                 httpVueLoader.register(Vue, name);
 
                 if(current.component === name) {
-                    Vue.prototype.$state.location = {root: 'layout'}; //make dynamic check
+                    Vue.prototype.$state.location = {root: 'layout'}; //make dynamic check (what dynamic???)
 
                     vm.$nextTick(function () {
                         Vue.prototype.$state.location = component_data[name].layouts;
@@ -367,6 +368,8 @@ window.vm = new Vue({
             name: 'root',
             layouts: [],
 
+            //'success', 'info', 'error'
+
             snackbar: {
                 timeout: 4000,
                 color: 'red darken-2',
@@ -386,13 +389,19 @@ window.vm = new Vue({
         let self = this;
         this.$vuetify.theme = theme;
 
-        this.$bus.$on('snackbar', function (message) {
+        this.$bus.$on('snackbar', function (message, color) {
+            self.snackbar.color = color || 'red darken-2';
             self.snackbar.message = message;
             self.snackbar.visible = true;
         });
 
         this.$socket.on('connect', () => {
             console.log(this.$socket.id); // 'G5p5...'
+        });
+
+        this.$socket.on('message', (...args) => {
+            //console.log('MESSAGE:', this.$socket.id, args); // 'G5p5...'
+            this.$bus.$emit('snackbar', args, 'blue darken-2');
         });
     },
     computed: {

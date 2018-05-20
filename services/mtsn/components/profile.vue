@@ -27,6 +27,7 @@
                             </v-flex>
                             <v-flex xs12>
                                 <v-text-field v-model="entity.public_id"
+                                    autofocus
                                     label="Public ID"
                                     required
                                     prepend-icon="fas fa-id-card"
@@ -76,72 +77,53 @@
 
         data() {
             return {
-                blob: void 0,
-                //image: 'files/ava.png',
+                //blob: void 0,
+                image_data: void 0,
             }
         },
         beforeCreate() {
         },
         created() {
+/*
             this.$bus.$on('merge:profile', (entities) => {
                 let user_id = this.auth.id || 0;
                 this.entities.profile[user_id].image = entities.profile[user_id].image;
             });
+*/
         },
         computed: {
             entity() {
                 return {...this.object};
             },
-            image() {
-                //!this.blob && this.object.image && (this.blob = this.object.image);
-                if(!this.blob && this.entity.image) {
-                    if(this.entity.image.data) {
-                        let binary = new Uint8Array(this.entity.image.data);
-                        let blob = new Blob([binary], {type: this.entity.mimeType});
-                        blob.size ? this.createImage(blob) : this.blob = this.entity.image;
-                    }
-                    else this.blob = URL.createObjectURL(this.entity.image);
-                    //this.blob = blob;
-                }
 
-                //!this.blob && this.object.image && this.createImage(new Blob(this.object.image.data, {type: this.object.mimeType}));
-                return this.blob;
+            image() {
+                !this.image_data && (this.image_data = this.entity.image_data);
+
+                return this.image_data;
             }
+
         },
         methods: {
             cancel() {
-                this.blob = void 0;
-                //this.blob = this.image;
+                this.image_data = this.entity.image_data;
                 this.$emit('cancel');
             },
+
             onFileChange(e) {
                 let files = e.target.files || e.dataTransfer.files;
 
                 if (!files.length)
                     return;
 
-                this.entity.avatar = files[0].name;
-
-                this.createImage(files[0]);
-                //this.blob = files[0];
-            },
-            createImage(file) {
-                let reader = new FileReader();
-                let self = this;
-
-                reader.onload = (e) => {
-                    self.blob = e.target.result;
-                };
-
-                reader.readAsDataURL(file);
+                if(files[0].size <= 1024 * 200) {
+                    this.entity.avatar = files[0].name;
+                    this.entity.mime_type = files[0].type;
+                    this.image_data = URL.createObjectURL(files[0]);
+                }
+                else this.$bus.$emit('snackbar', 'File too large');
             },
             removeImage: async function (e) {
-                //this.image = 'files/ava.png';
-                this.blob = 'files/ava.png';//await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
-                Vue.nextTick(async () => {
-                    this.createImage(await blobUtil.imgSrcToBlob(this.$refs.avatar.src));
-                });
-                //console.log(this.blob);
+                this.image_data = 'files/ava.png';
             },
             selectFile() {
                 this.$refs.file_input.click();
@@ -163,9 +145,18 @@
                 // write the ArrayBuffer to a blob, and you're done
                 return new Blob([ab], { type: mimeString });
             },
-            async save() {
-                if (this.$refs.form.validate()) {
 
+            async save() {
+
+                if (this.$refs.form.validate()) {
+                    let blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src, this.entity.mime_type);
+                    //let blob = await this.dataURItoBlob(this.$refs.avatar.src);
+
+                    this.entity.image_data = this.image_data;
+                    //this.entity.mime_type = blob.type;
+                    this.entity.image = blob;
+
+/*
                     this.entity.avatar = this.entity.avatar || 'ava.png';
 
                     let data = new FormData();
@@ -190,7 +181,9 @@
                     //this.$request('profile.save', data, {encode: 'form-data', callback: this.cancel});
                     this.entity.image = blob;
                     //this.$emit('save', data);
+*/
                     this.$emit('save', this.entity);
+                    //this.$emit('cancel');
                 }
                 else this.$bus.$emit('snackbar', 'Data entered don\'t match validation rules');
 

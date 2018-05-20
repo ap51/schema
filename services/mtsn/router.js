@@ -229,7 +229,7 @@ router.all(patterns, [jwtHandler(), async function(req, res, next) {
         let {access, scope} = Class || {};
         let {user, client} = req;
 
-        let params = {access, scope, user, client};
+        let params = {access, scope, user, client, req, res};
         params.id = req.$params.id;
 
         is_ignored && (params.name = name);

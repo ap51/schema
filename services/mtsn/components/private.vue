@@ -5,9 +5,28 @@
                 <v-layout column>
                     <v-flex xs12 class="elevation-1">
                         <v-card flat color="white " class="blue--text text--darken-2">
+                            <v-list-tile avatar>
+                                <v-list-tile-avatar>
+                                    <img :src="avatar" :alt="auth.name">
+                                </v-list-tile-avatar>
+                                <v-list-tile-content>
+                                    <div class="title">{{auth.name}}</div>
+                                    <div class="caption">{{profile.status}}</div>
+                                </v-list-tile-content>
+                            </v-list-tile>
                             <div class="ma-2">
-                                <div class="title">{{auth.name}}</div>
-                                <div class="caption">{{'anything...'}}</div>
+<!--
+                                <v-avatar
+                                        size="32px"
+                                        color="grey lighten-4"
+                                >
+                                    <img :src="avatar" alt="avatar">
+                                </v-avatar>
+                                <div>
+                                    <div class="title">{{auth.name}}</div>
+                                    <div class="caption">{{profile.status}}</div>
+                                </div>
+-->
                             </div>
 
                             <v-card-actions>
@@ -76,6 +95,12 @@
             //newValue !== this.state.path && this.$router.replace(newValue);
         },
         computed: {
+            profile() {
+                return (this.auth.id && this.entities.profile && this.entities.profile[this.entities.user[this.auth.id].profile]) || {};
+            },
+            avatar() {
+                return this.profile.image_data;
+            }
         },
         watch: {
             'active': function (new_value, old_value) {

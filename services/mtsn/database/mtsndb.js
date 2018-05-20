@@ -1,3 +1,4 @@
+const path = require('path');
 let db = module.exports;
 
 const neo4j = require('neo4j-driver').v1;
@@ -21,6 +22,76 @@ const docker = new Docker({ //NOT WORKING SSL !!!
 });
 
 db.docker = docker;
+
+db.startContainer = async function({image_name = 'neo4j', tag = 'latest', container_name = 'common', users_path}) {
+
+    let container = await db.findContainer({name: container_name});
+
+    if (!container) {
+        let found = !!await db.findImage({name: `${image_name}:${tag}`});
+
+        if (!found) {
+            let image = await db.pull({image: `${image_name}:${tag}`});
+            console.log(image);
+        }
+
+        let common_path = path.join(users_path, 'common');
+
+        let Binds = [];
+        if(container_name === 'common') {
+            Binds = [
+                `${path.join(common_path, 'dbms')}:/data/dbms`,
+                `${path.join(common_path, 'conf')}:/conf`,
+                `${path.join(common_path, 'plugins')}:/plugins`,
+                `${path.join(common_path, 'databases')}:/data/databases`,
+                `${path.join(common_path, 'files')}:/import`
+            ]
+        }
+        else {
+            let user_path = path.join(users_path, container_name);
+
+            Binds = [
+                `${path.join(common_path, 'dbms')}:/data/dbms`,
+                `${path.join(common_path, 'conf')}:/conf`,
+                `${path.join(common_path, 'plugins')}:/plugins`,
+
+                `${path.join(user_path, 'databases')}:/data/databases`,
+                `${path.join(user_path, 'files')}:/import`
+            ]
+        }
+
+        container = await db.docker.createContainer({
+            image: `${image_name}:${tag}`,
+            name: container_name,
+            //name: req.user.id,
+            HostConfig: {
+                PublishAllPorts: true,
+                Binds
+            }
+        });
+
+    }
+    else container = await db.docker.getContainer(container.Id);
+
+    let info = await container.inspect();
+
+    !info.State.Running && await container.start();
+    info = await container.inspect();
+
+    let bolt_port = info.NetworkSettings.Ports['7687/tcp'];
+    bolt_port = bolt_port.length && bolt_port[0].HostPort;
+
+/*
+    const driver = db.driver(bolt_port);
+    let records = await db.CQL({driver, query: 'MERGE (james:Person {name : {nameParam} }) RETURN james.name AS name', params: {nameParam: 'James'}});
+
+    records.forEach(function (record) {
+        console.log(record.get('name'));
+    });
+
+*/
+    return bolt_port;
+};
 
 db.findContainer = async function ({name}) {
     let containers = await docker.listContainers({all: true});
@@ -75,7 +146,7 @@ db.pull = async function ({image, options}) {
 
 };
 
-db.CQL = async function ({driver, query, params, try_count = 20, timeout = 500}) {
+db.CQL = async function ({driver, query, params, try_count = 40, timeout = 500}) {
 
     let execute = async function (query, params) {
         try {
