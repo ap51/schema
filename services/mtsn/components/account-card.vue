@@ -135,7 +135,10 @@
 
                             this.$request('profile.save', data, {
                                 encode: 'form-data',
-                                callback: () => this.$emit('saved')
+                                callback: () => {
+                                    this.$emit('saved');
+                                    this.dialogs.profile.object = void 0;
+                                }
                             });
                         }
                     }

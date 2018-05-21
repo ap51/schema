@@ -107,6 +107,9 @@ class Base {
 
         this.$request = axios;
 
+        if(scope.length)
+            console.log('sdsd');
+
         let self = this;
 
         let trace = function(key, context, value, args) {
@@ -789,7 +792,7 @@ function Account(SuperClass) {
                 user = updates[0];
 
                 req.user = {id: user.id, name, group, email};
-                req.token.secret = {user: req.user};
+                req.token.secret.user = req.user;
 
                 return this.model({auth: req.user});
             }
@@ -991,6 +994,7 @@ let matrix = [
     {
         component: UI,
         access: [],
+        scope: ['web'],
         children: [
             {
                 component: Layout,

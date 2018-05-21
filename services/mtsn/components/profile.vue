@@ -105,8 +105,9 @@
         },
         methods: {
             cancel() {
-                this.image_data = this.entity.image_data;
                 this.$emit('cancel');
+                //this.image_data = this.entity.image_data;
+
             },
 
             onFileChange(e) {
@@ -128,7 +129,7 @@
             selectFile() {
                 this.$refs.file_input.click();
             },
-            dataURItoBlob(dataURI) {
+            /*dataURItoBlob(dataURI) {
                 // convert base64 to raw binary data held in a string
                 let byteString = atob(dataURI.split(',')[1]);
 
@@ -144,44 +145,17 @@
 
                 // write the ArrayBuffer to a blob, and you're done
                 return new Blob([ab], { type: mimeString });
-            },
+            },*/
 
             async save() {
 
                 if (this.$refs.form.validate()) {
                     let blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src, this.entity.mime_type);
-                    //let blob = await this.dataURItoBlob(this.$refs.avatar.src);
 
                     this.entity.image_data = this.image_data;
-                    //this.entity.mime_type = blob.type;
+
                     this.entity.image = blob;
 
-/*
-                    this.entity.avatar = this.entity.avatar || 'ava.png';
-
-                    let data = new FormData();
-                    let fields = Object.entries(this.entity);
-
-                    fields.forEach(item => {
-                        let [name, value] = item;
-                        data.append(name, value);
-                    });
-
-                    let blob = void 0;
-                    try {
-                        blob = this.dataURItoBlob(this.$refs.avatar.src);
-                    }
-                    catch (err) {
-                        blob = await blobUtil.imgSrcToBlob(this.$refs.avatar.src);
-                    }
-                    data.append('image', blob);
-                    this.createImage(blob);
-
-                    Object.assign(this.object, this.entity);
-                    //this.$request('profile.save', data, {encode: 'form-data', callback: this.cancel});
-                    this.entity.image = blob;
-                    //this.$emit('save', data);
-*/
                     this.$emit('save', this.entity);
                     //this.$emit('cancel');
                 }
@@ -190,6 +164,9 @@
             }
         },
         watch: {
+            'visible': function (val) {
+                val && (this.image_data = this.entity.image_data);
+            }
         }
     }
 

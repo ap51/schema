@@ -1,5 +1,7 @@
 'use strict';
 
+JSON.parse = require('./json-parse');
+
 let service = __dirname.split(/\/|\\/g);
 service = service.pop();
 
@@ -13,6 +15,7 @@ const jwt = require('jsonwebtoken');
 
 const express = require('express');
 const bodyParser = require('body-parser');
+
 
 let router = express.Router();
 
@@ -82,7 +85,7 @@ let encode = async function (token) {
 
     token[service].data = token[service].data || {session: await crypto.createPassword()};
 
-    token[service].secret && (token[service].secret = await encryptRSA(JSON5.stringify(token[service].secret), token.public || keys.publicKey));
+    token[service].secret && (token[service].secret = await encryptRSA(JSON.stringify(token[service].secret), token.public || keys.publicKey));
 
     let encoded = jwt.sign(token, keys.privateKey);
     return encoded;
@@ -107,7 +110,7 @@ let decode = async function (token) {
     decoded.verified = verified;
     decoded[service] = decoded[service] || {};
 
-    decoded[service].secret && (decoded[service].secret = JSON5.parse(await decryptRSA(decoded[service].secret, keys.privateKey)));
+    decoded[service].secret && (decoded[service].secret = JSON.parse(await decryptRSA(decoded[service].secret, keys.privateKey)));
     decoded[service].count = decoded[service].count + 1 || 1;
     return decoded;
 };
@@ -134,6 +137,52 @@ let jwtHandler = function(options) {
             throw new CustomError(401, 'Invalid signature');
 
         req.token = req.$token[service];
+
+        let expired = req.token && req.token.secret && req.token.secret.expired && new Date() > new Date(req.token.secret.expired);
+
+        if (expired) {
+            throw new CustomError(401, 'Token expired');
+/*
+            try {
+                let body = {...req.body};
+
+                client = await database.findOne('client', {_id: client._id});
+                token = await database.findOne('token', {accessToken: token.access.token}, {allow_empty: true});
+
+                req.body = {
+                    grant_type: 'refresh_token',
+                    refresh_token: token.refreshToken,
+                    client_id: client.client_id,
+                    client_secret: client.client_secret,
+                    scope: client.scope.join(',')
+                };
+
+                req.method = 'POST';
+                req.headers['content-type'] = 'application/x-www-form-urlencoded';
+                req.headers['transfer-encoding'] = 'true';
+                req.headers['content-length'] = 1;
+
+                token = await tokenHandler({})(req, res);
+
+                let {accessToken, accessTokenExpiresAt, refreshToken, user, client} = token;
+
+                req.token.access = {
+                    token: accessToken,
+                    expired: accessTokenExpiresAt,
+                    user,
+                    client
+                };
+
+                req.user = user;
+
+                console.log(token.access.refresh_token);
+            }
+            catch(err) {
+                req.token.access = void 0;
+                throw new CustomError(401, 'Unauthenticate');
+            }
+*/
+        }
 
         let access_token = (req.token.secret && req.token.secret.access_token) || req.query.access_token;
         req.query.access_token = void 0;
