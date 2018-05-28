@@ -15,7 +15,7 @@ let tokenHandler = function(options) {
 
         return token;
 
-        next && next();
+        //next && next();
     }
 };
 

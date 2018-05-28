@@ -115,6 +115,8 @@ let decode = async function (token) {
     return decoded;
 };
 
+const database = require('./database/db');
+const oauth = require('./oauth');
 
 let jwtHandler = function(options) {
 
@@ -138,60 +140,27 @@ let jwtHandler = function(options) {
 
         req.token = req.$token[service];
 
-        let expired = req.token && req.token.secret && req.token.secret.expired && new Date() > new Date(req.token.secret.expired);
+        let expired = req.token && req.token.secret && req.token.secret.expires && new Date() > new Date(req.token.secret.expires);
+        if(expired) {
+            req.params = '';
 
-        if (expired) {
-            throw new CustomError(401, 'Token expired');
-/*
-            try {
-                let body = {...req.body};
+            req.token.secret = void 0;
 
-                client = await database.findOne('client', {_id: client._id});
-                token = await database.findOne('token', {accessToken: token.access.token}, {allow_empty: true});
+            req.user = void 0;
+            req.client = void 0;
 
-                req.body = {
-                    grant_type: 'refresh_token',
-                    refresh_token: token.refreshToken,
-                    client_id: client.client_id,
-                    client_secret: client.client_secret,
-                    scope: client.scope.join(',')
-                };
-
-                req.method = 'POST';
-                req.headers['content-type'] = 'application/x-www-form-urlencoded';
-                req.headers['transfer-encoding'] = 'true';
-                req.headers['content-length'] = 1;
-
-                token = await tokenHandler({})(req, res);
-
-                let {accessToken, accessTokenExpiresAt, refreshToken, user, client} = token;
-
-                req.token.access = {
-                    token: accessToken,
-                    expired: accessTokenExpiresAt,
-                    user,
-                    client
-                };
-
-                req.user = user;
-
-                console.log(token.access.refresh_token);
-            }
-            catch(err) {
-                req.token.access = void 0;
-                throw new CustomError(401, 'Unauthenticate');
-            }
-*/
         }
+        else {
 
-        let access_token = (req.token.secret && req.token.secret.access_token) || req.query.access_token;
-        req.query.access_token = void 0;
+            let access_token = (req.token.secret && req.token.secret.access_token) || req.query.access_token;
+            req.query.access_token = void 0;
 
 
-        req.user = req.token && req.token.secret && req.token.secret.user;
-        req.client = req.token && req.token.secret && req.token.secret.client;
+            req.user = req.token && req.token.secret && req.token.secret.user;
+            req.client = req.token && req.token.secret && req.token.secret.client;
 
-        req.headers['authorization'] = access_token && `Bearer ${access_token}`;
+            req.headers['authorization'] = access_token && `Bearer ${access_token}`;
+        }
 
         next();
     }
@@ -300,6 +269,8 @@ router.all(patterns, [jwtHandler(), async function(req, res, next) {
 
 }]);
 
+let do_refresh = true;
+
 router.all(patterns, [async function (req, res, next) {
     //ЗДЕСЬ АВТОРИЗАЦИЯ И ДОСТУП
 
@@ -311,9 +282,94 @@ router.all(patterns, [async function (req, res, next) {
     //6. вызов родительских действий (наследование в классе по таблице доступа)
     //7. общий класс для компонента и общий класс по таблице доступа
     //8. ...
+/*
+    let refresh = async function () {
+
+        try {
+            let client = req.token.secret && await database.findOne('client', {_id: req.token.secret.client.id});
+            let token = req.token.secret && await database.findOne('token', {accessToken: req.token.secret.access_token}, {allow_empty: true});
+
+            if(client && token) {
+                req.body = {
+                    grant_type: 'refresh_token',
+                    refresh_token: token.refreshToken,
+                    client_id: client.client_id,
+                    client_secret: client.client_secret,
+                    scope: client.scope.join(',')
+                };
+
+                req.method = 'POST';
+                req.headers['content-type'] = 'application/x-www-form-urlencoded';
+                req.headers['transfer-encoding'] = 'true';
+                req.headers['content-length'] = 1;
+
+/!*
+                let request = {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/x-www-form-urlencoded',
+                        'transfer-encoding': 'true',
+                        'content-length': 1
+                    },
+                    query: 'query',
+                    body: {
+                        grant_type: 'refresh_token',
+                        refresh_token: token.refreshToken,
+                        client_id: client.client_id,
+                        client_secret: client.client_secret,
+                        scope: client.scope.join(',')
+                    }
+                };
+*!/
+
+/!*
+                token = await new Promise(resolve => {
+                    let result = process.$bus.emit('refresh:token', req.token.secret.access_token, request);
+                    process.$bus.once('refresh:complete', token => resolve(token));
+                    console.log('REVOKED');
+                });
+*!/
+
+                token = await oauth.tokenHandler({accessTokenLifetime: 10})(req, res);
+
+                let {accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, user} = token;
+                client = token.client;
+
+                req.token.secret = {
+                    access_token: accessToken,
+                    expires: accessTokenExpiresAt,
+                    refresh_expires: refreshTokenExpiresAt,
+                    user,
+                    client
+                };
+
+                req.user = user;
+
+                //console.log(token.access.refresh_token);
+            }
+        }
+        catch(err) {
+            req.token.secret = void 0;
+
+            req.user = void 0;
+            req.client = void 0;
+
+            throw new CustomError(401, 'Unauthenticate');
+        }
+
+    };
+
+    let expired = req.token && req.token.secret && req.token.secret.expires && new Date() > new Date(req.token.secret.expires);
+    console.log(expired);
+
+    console.log('REVOKE');
+    expired && await refresh();
+*/
+
 
     if(!req.$response) {
         try {
+
             if (req.$params.action) {
                 let data = req.$component[req.$params.action] ? await req.$component[req.$params.action](req, res) : {entities: {}};
 

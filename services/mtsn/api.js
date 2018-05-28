@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -11,7 +11,7 @@ const stat = util.promisify(fs.stat);
 const mkdir = util.promisify(fs.mkdir);
 const readFile = util.promisify(fs.readFile);
 const database = require('./database/db');
-const OAUTH = require('./oauth');
+const oauth = require('./oauth');
 const mtsndb = require('./database/mtsndb');
 
 const nanoid = require('nanoid');
@@ -107,8 +107,8 @@ class Base {
 
         this.$request = axios;
 
-        if(scope.length)
-            console.log('sdsd');
+        //if(scope.length)
+        //    console.log('sdsd');
 
         let self = this;
 
@@ -453,6 +453,7 @@ function SignIn(SuperClass) {
             }
             catch (err){
                 console.log('ERROR START CONTAINER');
+                throw new CustomError(err.code, err.message);
             }
         }
 
@@ -469,13 +470,14 @@ function SignIn(SuperClass) {
                 req.body.grant_type = 'password';
                 req.body.scope = scope.join(',');
 
-                let token = await OAUTH.tokenHandler({})(req, res);
+                let token = await oauth.tokenHandler({accessTokenLifetime: 10})(req, res);
 
-                let {accessToken, accessTokenExpiresAt, refreshToken, user, client} = token;
+                let {accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, user, client} = token;
 
                 req.token.secret = {
                     access_token: accessToken,
-                    expired: accessTokenExpiresAt,
+                    expires: accessTokenExpiresAt,
+                    refresh_expires: refreshTokenExpiresAt,
                     user,
                     client
                 };
@@ -511,19 +513,20 @@ function SignOut(SuperClass) {
         }
 
         async submit(req, res) {
-            await database.remove('token', {accessToken: req.token.secret.access_token}, {allow_empty: true});
+            if(req.token.secret) {
+                await database.remove('token', {accessToken: req.token.secret.access_token}, {allow_empty: true});
 
-            let container = await mtsndb.findContainer({name: req.user.id});
-            container && (container = await mtsndb.docker.getContainer(container.Id));
+                let container = await mtsndb.findContainer({name: req.user.id});
+                container && (container = await mtsndb.docker.getContainer(container.Id));
 
-            let info = container && await container.inspect();
-            info && info.State.Running && await container.stop();
+                let info = container && await container.inspect();
+                info && info.State.Running && await container.stop();
 
-            req.token.secret = void 0;
+                req.token.secret = void 0;
 
-            req.user = void 0;
-            req.client = void 0;
-
+                req.user = void 0;
+                req.client = void 0;
+            }
 
             return this.model({auth: void 0});
         }

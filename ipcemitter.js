@@ -14,6 +14,7 @@ function MessageBus() {
     if(cluster.isWorker) {
         emitter.$emit = emitter.emit;
         emitter.emit = emit;
+
     }
 
     cluster.on('exit', function(worker, code, signal) {
@@ -61,8 +62,7 @@ function MessageBus() {
                 let {event, args} = msg;
 
                 //console.log('ON MESSAGE:', event, args);
-
-                if (event.toUpperCase() === 'BROADCAST') {
+                if (event === '__broadcast__') {
                     _broadcast(child, msg._event, ...args);
                 }
                 else emitter.emit(event, ...args, child); //self master trigger on
@@ -93,7 +93,7 @@ function MessageBus() {
 
     function broadcast(event, ...args) {
         if(cluster.isWorker) {
-            let message = {event: 'broadcast', _event: event, args};
+            let message = {event: '__broadcast__', _event: event, args};
             process.send(message); //send to master to broadcast
         }
         else _broadcast(void 0, event, ...args);

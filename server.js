@@ -58,6 +58,7 @@ if(cluster.isMaster) {
         process.$bus.broadcast('proxyme', {kdkd:''})
     });
  */
+
     process.$bus.on('execute', async (module, eid, ...args) => {
         let worker = args.pop();
 
@@ -173,7 +174,7 @@ if(cluster.isWorker) {
 
 process.on('unhandledRejection', err => {
     //throw err;
-    console.log('unhandledRejection => ', err)
+    console.log('unhandledRejection => ', err);
 });
 
     

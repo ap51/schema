@@ -33,6 +33,7 @@
     "neo4j-driver": "^1.6.1",
     "normalizr": "^3.2.4",
     "oauth2-server": "^3.0.0",
+    "pg": "^7.4.3",
     "socket.io": "^2.1.0",
     "vis": "^4.21.0",
     "vuetify": "^1.0.18"

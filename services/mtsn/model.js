@@ -145,21 +145,12 @@ model.getRefreshToken = async function(refreshToken, callback) {
         //token.user.public_id = profile.public_id;
 
         //token.client = await db.findOne('client', {_id: token.client.id}, {not_clear_result: true});
-
+        token.refreshTokenExpiresAt = new Date(token.refreshTokenExpiresAt.$$date);
         callback(null, token);
     }
     catch(err) {
         callback(err);
     }
-
-    /* db.find('token', {refreshToken}, async function(err, tokens) {
-        let token = tokens[0];
-        if(token) {
-            token.user = await db.findOne('user', {_id: token.user._id}, {not_clear_result: true});
-            token.client = await db.findOne('client', {_id: token.client._id});
-        }
-        tokens.length ? callback(null, token) : callback(err || new OAuth2Server.InvalidTokenError());
-    }); */
 
 };
 
@@ -192,9 +183,19 @@ model.getUserFromClient = async function(client, callback) {
 };
 
 model.revokeToken = async function(token, callback) {
+    console.log('revoke');
+    let found = await db.findOne('token', {accessToken: token.accessToken}, {allow_empty: true});
+
+    found && await db.removeToken({accessToken: token.accessToken}, {});
+    //found && await db.remove('token', {accessToken: token.accessToken}, {});
+
+    callback(void 0, true);
+    //return true;
+/*
     db.remove('token', {accessToken: token.accessToken}, {}, function (err, removed) {
         callback(err, removed);
     });
+*/
 
 };
 

@@ -13,6 +13,7 @@ class NotFoundError extends Error {
     constructor(collection) {
         super(`Nothing has been found in "${collection}".`);
         this.code = 404;
+        this.message = `Nothing has been found in "${collection}".`;
     }
 }
 
@@ -129,9 +130,41 @@ if(cluster.isMaster) { //DB not used in MASTER PROCESS, ONLY IN ROUTER
 
         });
     };
+
+    db.throttleLead = function (fn, threshhold = 250, scope) {
+        let last;
+        return function(...args) {
+            const context = scope || this;
+            const now = +(new Date());
+
+            if (last && now > last + threshhold) {
+                last = now;
+                fn.apply(context, args);
+            } else if (!last) {
+                last = now;
+                fn.apply(context, args);
+            }
+        };
+    };
+
+    let last;
+    db.removeToken = function (query, options) {
+        let collection = 'token';
+        const now = +(new Date());
+
+        if (last && now > last + 100) {
+            last = now;
+            console.log('REMOVE FIRED');
+            return db.remove(collection, query, options);
+        } else if (!last) {
+            last = now;
+            console.log('REMOVE FIRED');
+            return db.remove(collection, query, options);
+        }
+    };
 }
 else {
-    let exports = ['find', 'findOne', 'update', 'remove', 'insert'];
+    let exports = ['find', 'findOne', 'update', 'remove', 'insert', 'removeToken'];
 
     module.exports = exports.reduce((memo, method) => {
         memo[method] = function (...args) {
